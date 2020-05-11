@@ -1,80 +1,143 @@
 (setq databasefile "~/database.org")
 
+(setq db-foods nil)
+(setq db-recipes nil)
 
-(defvar database nil)
+(defsubst db-s2n (num pin)
+  "String 2 Num. Extract the NUM index from PIN, zip it in and zip it out."
+  (string-to-number (nth num pin)))
+
+(defun db-foods-2plist (pin)
+  "Resident PIN ."
+  `(:kc ,(db-s2n 0 pin) :portion ,(db-s2n 1 pin)
+        :carbs ,(db-s2n 2 pin) :fibre ,(db-s2n 3 pin) :sugars ,(db-s2n 4 pin)
+        :protein ,(db-s2n 5 pin) :fat ,(db-s2n 6 pin) :sodium ,(db-s2n 7 pin)))
+
+(defun db-recipes-2plist (pin)
+  "Resident PIN."
+  (let ((recipealist nil))
+    (dolist (ingredients (split-string pin ",,"))
+      (dolist (portfood (split-string pin "::"))
+        (let ((port (nth 0 portfood))
+              (food (nth 1 portfood)))
+          (push (cons port food) recipealist))))
+    recipealist))
+
+
+(defun database-makeheaders ()
+  (let ((str-titled "#+TITLE: Database of Foodstuffs")
+        (str-dbfood "* Individual Foods")
+        (str-dbrecp "* Recipes"))
+    (with-current-buffer (find-file-noselect databasefile)
+      (goto-char 0)
+      ;; Make Headers
+      (unless (search-forward str-titled nil t)
+        (insert "\n\n")
+        (insert str-titled)
+        (insert "\n\n"))
+      (if (search-forward str-dbfood nil t)
+          (if (search-forward str-dbrecp nil t)
+              (progn (beginning-of-line)
+                     (forward-line -1))
+            (end-of-buffer))
+        (insert "\n\n")
+        (insert str-dbfood)
+        (insert "\n\n")
+        (insert "| Name | kCal | Portion(g) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
+        (org-table-insert-hline)
+        (forward-char 1)
+        (org-table-insert-row -1)
+        (end-of-line 1)
+        (insert "\n\n"))
+      (if (search-forward str-dbrecp nil t)
+          (end-of-buffer)
+        (insert "\n\n")
+        (insert str-dbrecp)
+        (insert "\n\n")
+        (insert "| Name | Ingredients (Portion(g)::Foods,,) |")
+        (org-table-insert-hline)
+        (forward-char 1)
+        (org-table-insert-row -1)
+        (end-of-line 1)
+        (insert "\n\n")))))
+
+
+(defun database-generate (&optional type)
+  "Generate the database from the file, and limit to TYPE."
+  (database-makeheaders)
+  (let ((str-titled "#+TITLE: Database of Foodstuffs")
+        (str-dbfood "* Individual Foods")
+        (str-dbrecp "* Recipes"))
+    (with-current-buffer (find-file-noselect databasefile)
+      ;; Parse Tables
+      (goto-char 0)
+      (cond ((eq type 'foods)
+             (if (search-forward "* Individual Foods" nil t)
+                 (if (re-search-forward org-table-line-regexp nil t)
+                     (dolist (row (cddr (org-table-to-lisp)))
+                       (let ((nam (car row))
+                             (pin (cdr row)))
+                         (if (> (length nam) 1)
+                             (push (cons nam (db-foods-2plist pin))
+                                   db-foods)))))))
+            ((eq type 'recipes)
+             (if (search-forward "* Recipes" nil t)
+                 (if (re-search-forward org-table-line-regexp nil t)
+                     (dolist (row (cddr (org-table-to-lisp)))
+                       (let ((nam (car row))
+                             (pin (cdr row)))
+                         (if (> (length nam) 1)
+                             (push (cons nam (db-recipes-2plist pin))
+                                   db-recipes)))))))
+            (t (user-error "Doesn't exist."))))))
+
 
 (defun database-sync ()
-  "Sync database to database file.")
+  "Sync db-foods to db-foods file."
+  (database-makeheaders)
+  (let ((str-titled "#+TITLE: Database of Foodstuffs")
+        (str-dbfood "* Individual Foods")
+        (str-dbrecp "* Recipes"))
+    (with-current-buffer (find-file-noselect databasefile)
+      ;; Parse Tables
+      (goto-char 0)
+      (cond ((eq type 'foods)
+             (if (search-forward "* Individual Foods" nil t)
+                 (if (re-search-forward org-table-line-regexp nil t)
+                     ;;
+                     ())))
+            ((eq type 'recipes)
+             (if (search-forward "* Recipes" nil t)
+                 (if (re-search-forward org-table-line-regexp nil t)
+                     ;;
+                     ())))
+            (t (user-error "Doesn't exist."))))))
 
-(defun validate-entry (pentry)
-  "Checking the contents of PENTRY."
-  (let ((judgement "Keeping inconsistency, but secretly judging you for it.")
-        (kc (plist-get pentry :kc))
-        (fat (plist-get pentry :fat))
-        (carbs (plist-get pentry :carbs))
-        (fibre (plist-get pentry :carbs-fibre))
-        (sugars (plist-get pentry :carbs-sugars))
-        (sodium (plist-get pentry :sodium))
-        (portion (plist-get pentry :portion))
-        (protein (plist-get pentry :protein)))
-    (unless (or (> fibre carbs) (> sugars carbs))
-      (let ((newcarbs (+ fibre sugars)))
-        (if (y-or-n-p (format "Fibre(%sg) or Sugar(%sg) are > Total Carbs(%sg).\nChange Total Carbs to %sg? " fibre sugars carbs newcarbs))
-            (setq carbs newcarbs)
-          (message judgement))))
-    (let ((newkc (+ (* 4 (- carbs fibre)) (* 4 protein) (* 7 fat))))
-      (unless (= newkc kc)
-        (if (y-or-n-p (format "(4*((carbs - fibre) + protein)) + (7*fat) =\n(4*((%s - %s) + %s)) + (7*%s) = %s (and not the assigned %s).\nChange total KC for this portion to %s? " carbs fibre protein fat newkc kc newkc))
-            (setq kc newkc)
-          (message judgement))))
-    `(:kc ,kc :portion ,portion
-          :carbs ,carbs :carbs-fibre ,fibre :carbs-sugars ,sugars
-          :protein ,protein :fat ,fat :sodium ,sodium)))
-
-
-(defun get-newentry (fname)
-  "Create a new plist food entry named FNAME."
-  (if (y-or-n-p "Search online? ")
-      (online-retrieve fname)
-    (let* ((result (read-string
-                   (concat "[" fname "]:\
- kc portion carbs ~fibre ~sugars protein fat sodium(mg)\n")))
-           (parsed (loop for num in (split-string result)
-                         collect (string-to-number num)))
-           (plistinp
-            `(:kc ,(nth 0 parsed) :portion ,(nth 1 parsed)
-                  :carbs ,(nth 2 parsed) :carbs-fibre ,(nth 3 parsed)
-                  :carbs-sugars ,(nth 4 parsed) :protein ,(nth 5 parsed)
-                  :fat ,(nth 6 parsed) :sodium ,(nth 7 parsed))))
-      (validate-entry plistinp))))
-
-
-(defun database-generate ()
-  (unless (file-exists-p databasefile)
-    ;; Make table header
-    (with-current-buffer (get-buffer-create databasefile)
-      (erase-buffer)
-      (org-mode)
-      (insert "#+TITLE: Database of Foodstuffs\n")
-      (insert "\n")
-      (insert "| kCal | Portion(g) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |\n")
-      (insert "|-\n")
-      (insert "| |")
-      (org-table-align)))
-  ;; Parse the table
-  (goto-line 3)
-  (org-table-begin)
+  
+    ;; (forward-line 2)
+    ;; (org-table-begin)
+    ;; (forward-line 2)
+    ;; (dolist (fentry db-foods)
+    ;;   (let ((fname (car fentry))
+    ;;         (pinfo (cdr fentry)))
+    ;;     (org-table-next-field)
+    ;;     (let* ((fname-present (substring-no-properties
+    ;;                            (string-trim (org-table-get-field))))
+    ;;            (fname-exists (and (> (length fname-present) 1)
+    ;;                               (alist-get fname-present db-foods))))
+    ;;       (if fname-exists
+    ;;           (forward-line 1)
+    ;;         ;; If this already exists in the db, check values
+    ;;         ;; Otherwise insert new
+    ;;         (insert fname)
+    ;;         (org-table-next-field)
+    ;;         (dolist (pper '(:kc :portion :carbs :fibre :sugars
+    ;;                             :protein :fat :sodium))
+    ;;           (let ((num (plist-get pinfo pper)))
+    ;;             (insert (format "%s" num))
+    ;;             (org-table-next-field)))))))
+    ;; (org-table-next-field)
+    ;; (org-table-sort-lines)))
 
 
-
-(defun database-insert (fname &optional plist-info)
-  "Insert food FNAME with PLIST-INFO."
-  (cl-pushnew (cons fname
-                    (or plist-info (get-newentry fname))
-                    (or database (database-generate))))
-  (database-sync))
-
-
-(defun database-retrieve (fname)
-  "Retrieve food plist on FNAME from db."
-  (alist-get fname (or database (generate-database))))
+(provide 'org-calories-database)
