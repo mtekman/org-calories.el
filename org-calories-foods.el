@@ -32,26 +32,22 @@ This is not equal to the assigned %s kCal. Set Calories for this portion to  %s 
 
 (defun db-foods-newentry (fname)
   "Create a new plist food entry named FNAME."
-  ;;(if (y-or-n-p "Search online? ")
-  ;;(online-retrieve fname)
+  ;;(if (y-or-n-p "Search online? ") (online-retrieve fname)
   (let* ((result (read-string
                   (concat "[" fname "] Enter kCals and Grams:\n\
 kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
          (plistinp (db-foods-2plist (split-string result))))
     (db-foods-validateentry plistinp)))
 
-
 (defun db-foods-insert (fname &optional plist-info)
   "Insert food FNAME with PLIST-INFO."
   (interactive "sFood Name: ")
   (if (db-foods-retrieve fname)
-      (message "'%s' already exists in the food table, not inserting." fname)
-    ;; (database-generate 'foods) -- generate is performed by retrieve step above
+      (message "Food '%s' already exists in the food table, not inserting." fname)
     (cl-pushnew
      (cons fname (or plist-info (db-foods-newentry fname)))
      db-foods :key #'car)
     (database-sync 'foods)))
-
 
 (defun db-foods-retrieve (fname)
   "Retrieve food plist on FNAME from db."
@@ -60,15 +56,19 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
     (database-sync 'foods)))
 
 
+(defun db-recipes-newentry (rname)
+  ;; TODO: Look at the food-newentry
+  "Insert new recipe RNAME.")
+
 (defun db-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
-  (interactive)
-  (database-generate 'recipes)
-  (cl-pushnew
-   (cons rname (or plist-info (db-recipes-newentry rname)))
-   db-recipes :key #'car)
-  (database-sync 'recipes))
-
+  (interactive "sRecipe Name: ")
+  (if (db-recipes-retrieve rname)
+      (message "Recipe '%s' already exists in the recipes table, not inserting." rname)
+    (cl-pushnew
+     (cons rname (or plist-info (db-recipes-newentry rname)))
+     db-recipes :key #'car)
+    (database-sync 'recipes)))
 
 (defun db-recipes-retrieve (rname)
   "Retrieve recipe plist on RNAME from db."
@@ -77,11 +77,27 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
     (database-sync 'recipes)))
 
 
-;; Tests
+(defun db-exercises-newentry (ename))
+
+(defun db-exercise-insert (ename &optional plist-info)
+  "Define exercise ENAME with PLIST-INFO of description, duration, and calories."
+  (interactive "sExercise Name: ")
+  (if (db-exercises-retrieve ename)
+      (message "Exercise '%s' already exists in the exercises table, not inserting." ename)
+    (cl-pushnew
+     (cons ename (or plist-info (db-exercises-newentry ename)))
+     db-exercises :key #'car)
+    (database-sync 'exercises)))
+
+(defun db-exercises-retrieve ())
+
+
+
+;;;; -{Tests}-
 ;; (db-foods-insert "fruit1" '(:kc 110 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
 ;; (db-foods-insert "fruit2" '(:kc 120 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
 ;; (db-foods-insert "fruit3" '(:kc 130 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
 ;; (db-foods-retrieve "fruit2")
-(db-foods-insert "chew")
+;; (db-foods-insert "chew")
 ;; (db-recipes-insert "fruit salad" '((:food "fruit1" :portion 30) (:food "fruit2" :portion 120) (:food "fruit3" :portion 50)))
 ;; (db-recipes-retrieve "fruit salad")

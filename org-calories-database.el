@@ -2,6 +2,15 @@
 
 (setq db-foods nil)
 (setq db-recipes nil)
+(setq db-exercises nil)
+
+(setq str-titled "#+TITLE: Database of Foods, Recipes, and Exercises"
+      str-dbfood "* Individual Foods"
+      hed-dbfood "| Name | Calories (kC) | Portion(g) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |"
+      str-dbrecp "* Recipes"
+      hed-dbrecp "| Name | Ingredients (Foods::Portion(g)[,,] |" ;; variable length nested list
+      str-dbexer "* Exercises"
+      hed-dbexer "| Name | Duration (mins) | Calories (kC) |")
 
 (defsubst db-s2n (num pin)
   "String 2 Num. Extract the NUM index from PIN, zip it in and zip it out."
@@ -22,75 +31,86 @@
              (port (string-to-number (nth 1 portfood))))
         (push (list :food food :portion port) recipealist)))))
 
+(defun db-exercises-2plist (pin)
+  "Convert a single entry list of PIN to exercise plist."
+  `(:duration ,(db-s2n 0 pin) :kc ,(db-s2n 1 pin)))
+
+(defun database-maketable (section title header)
+  "Insert table with SECTION, TITLE, and HEADER."
+  (insert (format "\n\n%s\n\n" section))
+  (insert (format "#+NAME:%s\n" title))
+  (insert header)
+  (org-table-insert-hline)
+  (forward-char 1)
+  (org-table-insert-row -1)
+  (end-of-line 1)
+  (insert "\n\n"))
 
 (defun database-makeheaders ()
-  (let ((str-titled "#+TITLE: Database of Foodstuffs")
-        (str-dbfood "* Individual Foods")
-        (str-dbrecp "* Recipes"))
-    (with-current-buffer (find-file-noselect databasefile)
-      (goto-char 0)
-      ;; Make Headers
-      (unless (search-forward str-titled nil t)
-        (insert "\n\n")
-        (insert str-titled)
-        (insert "\n\n"))
-      (if (search-forward str-dbfood nil t)
-          (if (search-forward str-dbrecp nil t)
-              (progn (beginning-of-line)
-                     (forward-line -1))
-            (end-of-buffer))
-        (insert "\n\n")
-        (insert str-dbfood)
-        (insert "\n\n")
-        (insert "| Name | kCal | Portion(g) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
-        (org-table-insert-hline)
-        (forward-char 1)
-        (org-table-insert-row -1)
-        (end-of-line 1)
-        (insert "\n\n"))
-      (if (search-forward str-dbrecp nil t)
-          (end-of-buffer)
-        (insert "\n\n")
-        (insert str-dbrecp)
-        (insert "\n\n")
-        (insert "| Name | Ingredients (Foods::Portion(g)[,,] |")
-        (org-table-insert-hline)
-        (forward-char 1)
-        (org-table-insert-row -1)
-        (end-of-line 1)
-        (insert "\n\n")))))
+  "Make table headers"
+  (with-current-buffer (find-file-noselect databasefile)
+    (goto-char 0)
+    ;; Make Title if not found
+    (unless (search-forward str-titled nil t)
+      (insert str-titled)
+      (insert "\n\n"))
+    ;; Make Food, before Recipe
+    (if (search-forward str-dbfood nil t)
+        (if (search-forward str-dbrecp nil t)
+            (progn (beginning-of-line)
+                   (forward-line -1))
+          (end-of-buffer))
+      (database-maketable str-dbfood "Foods" hed-dbfood))
+    ;; Make Recipe, vor Exercises
+    (if (search-forward str-dbrecp nil t)
+        (if (search-forward str-dbexer nil t)
+            (progn (beginning-of-line)
+                   (forward-line -1))
+          (end-of-buffer))
+      (database-maketable str-dbrecp "Recipes" hed-dbrecp))
+    ;; Exercises, nach alles
+    (if (search-forward str-dbexer nil t)
+        (end-of-buffer)
+      (database-maketable str-dbexer "Exercises" hed-dbexer))))
 
 
 (defun database-generate (&optional type)
   "Generate the database from the file, and limit to TYPE."
   (database-makeheaders)
-  (let ((str-titled "#+TITLE: Database of Foodstuffs")
-        (str-dbfood "* Individual Foods")
-        (str-dbrecp "* Recipes"))
-    (with-current-buffer (find-file-noselect databasefile)
-      ;; Parse Tables
-      (goto-char 0)
-      (cond ((eq type 'foods)
-             (if (search-forward "* Individual Foods" nil t)
-                 (if (re-search-forward org-table-line-regexp nil t)
-                     (dolist (row (cddr (org-table-to-lisp)))
-                       (let ((nam (car row))
-                             (pin (cdr row)))
-                         (if (> (length nam) 1)
-                             (cl-pushnew (cons nam (db-foods-2plist pin))
-                                         db-foods
-                                         :test #'string= :key #'car)))))))
-            ((eq type 'recipes)
-             (if (search-forward "* Recipes" nil t)
-                 (if (re-search-forward org-table-line-regexp nil t)
-                     (dolist (row (cddr (org-table-to-lisp)))
-                       (let ((nam (car row))
-                             (pin (cadr row)))
-                         (if (> (length nam) 1)
-                             (cl-pushnew (cons nam (db-recipes-2plist pin))
-                                         db-recipes
-                                         :test #'string= :key #'car)))))))
-            (t (user-error "Doesn't exist."))))))
+  (with-current-buffer (find-file-noselect databasefile)
+    ;; Parse Tables
+    (goto-char 0)
+    (cond ((eq type 'foods)
+           (if (search-forward str-dbfood nil t)
+               (if (re-search-forward org-table-line-regexp nil t)
+                   (dolist (row (cddr (org-table-to-lisp)))
+                     (let ((nam (car row))
+                           (pin (cdr row)))
+                       (if (> (length nam) 1)
+                           (cl-pushnew (cons nam (db-foods-2plist pin))
+                                       db-foods
+                                       :test #'string= :key #'car)))))))
+          ((eq type 'recipes)
+           (if (search-forward str-dbrecp nil t)
+               (if (re-search-forward org-table-line-regexp nil t)
+                   (dolist (row (cddr (org-table-to-lisp)))
+                     (let ((nam (car row))
+                           (pin (cadr row)))
+                       (if (> (length nam) 1)
+                           (cl-pushnew (cons nam (db-recipes-2plist pin))
+                                       db-recipes
+                                       :test #'string= :key #'car)))))))
+          ((eq type 'exercises)
+           (if (search-forward str-dbexer nil t)
+               (if (re-search-forward org-table-line-regexp nil t)
+                   (dolist (row (cddr (org-table-to-lisp)))
+                     (let ((nam (car row))
+                           (pin (cdr row)))
+                       (if (> (length nam) 1)
+                           (cl-pushnew (cons nam (db-exercises-2plist pin))
+                                       db-exercises
+                                       :test #'string= :key #'car)))))))
+          (t (user-error "Doesn't exist.")))))
 
 
 (defun database-table-to-list (type)
@@ -117,81 +137,65 @@
     (org-table-align)
     (org-table-goto-column 1)))
 
+(defun database-trimandsort ()
+  "Trim table and sort on name."
+  ;; Trim last empty row
+  (progn (kill-line 0)(kill-line 1) (insert "\n")(forward-line -2))
+  ;; Sort by name
+  (org-table-goto-column 1)
+  (org-table-sort-lines nil ?a))
 
 (defun database-sync (type)
   "Sync db-foods to db-foods file."
   (database-makeheaders)
-  (let ((str-titled "#+TITLE: Database of Foodstuffs")
-        (str-dbfood "* Individual Foods")
-        (str-dbrecp "* Recipes"))
-    (with-current-buffer (find-file-noselect databasefile)
-      ;; Parse Tables
-      (save-excursion
-        (goto-char 0)
-        (cond ((eq type 'foods)
-               (if (search-forward "* Individual Foods" nil t)
-                   (when (re-search-forward org-table-line-regexp nil t)
-                     (database-kill-table)
-                     ;; Dump current food database
-                     (dolist (entry db-foods)
-                       (insert (car entry)) ;; food name
+  (with-current-buffer (find-file-noselect databasefile)
+    ;; Parse Tables
+    (save-excursion
+      (goto-char 0)
+      (cond ((eq type 'foods)
+             (if (search-forward str-dbfood nil t)
+                 (when (re-search-forward org-table-line-regexp nil t)
+                   (database-kill-table)
+                   ;; Dump current food database
+                   (dolist (entry db-foods)
+                     (insert (car entry)) ;; food name
+                     (org-table-next-field)
+                     (dolist (keyw '(:kc :portion :carbs :fibre :sugars
+                                         :protein :fat :sodium))
+                       (insert (format "%s" (plist-get (cdr entry) keyw)))
+                       (org-table-next-field)))
+                   (database-trimandsort))))
+            ((eq type 'recipes)
+             (if (search-forward str-dbrecp nil t)
+                 (when (re-search-forward org-table-line-regexp nil t)
+                   (database-kill-table)
+                   ;; Dump current recipes database
+                   (dolist (entry db-recipes)
+                     (insert (car entry)) ;; recipe name
+                     (org-table-next-field)
+                     (let ((inglist nil))
+                       (dolist (ingr (cdr entry))
+                         (let ((food (plist-get ingr :food))
+                               (port (plist-get ingr :portion)))
+                           (push (format "%s::%d" food port) inglist)))
+                       (insert (format "%s" (string-join inglist ",,")))
+                       (org-table-next-field)))
+                   (database-trimandsort))))
+            ((eq type 'exercises)
+             (if (search-forward str-dbexer nil t)
+                 (when (re-search-forward org-table-line-regexp nil t)
+                   (database-kill-table)
+                   ;; Dump current exercise database
+                   (dolist (entry db-exercises)
+                     (insert (car entry)) ;; exercise name
+                     (org-table-next-field)
+                     (let ((dur (plist-get (cdr entry) :duration))
+                           (cal (plist-get (cdr entry) :kc)))
+                       (insert (format "%d" dur))
                        (org-table-next-field)
-                       (dolist (keyw '(:kc :portion :carbs :fibre :sugars
-                                           :protein :fat :sodium))
-                         (insert (format "%s" (plist-get (cdr entry) keyw)))
-                         (org-table-next-field)))
-                     ;; Trim last empty row
-                     (progn (kill-line 0)(kill-line 1) (insert "\n")(forward-line -2))
-                     ;; Sort by name
-                     (org-table-goto-column 1)
-                     (org-table-sort-lines nil ?a))))
-              ((eq type 'recipes)
-               (if (search-forward "* Recipes" nil t)
-                   (when (re-search-forward org-table-line-regexp nil t)
-                     (database-kill-table)
-                     ;; Dump current recipes database
-                     (dolist (entry db-recipes)
-                       (insert (car entry)) ;; recipe name
-                       (org-table-next-field)
-                       (let ((inglist nil))
-                         (dolist (ingr (cdr entry))
-                           (let ((food (plist-get ingr :food))
-                                 (port (plist-get ingr :portion)))
-                             (push (format "%s::%d" food port) inglist)))
-                         (insert (format "%s" (string-join inglist ",,")))
-                         (org-table-next-field)))
-                     ;; Trim last empty row
-                     (progn (kill-line 0)(kill-line 1) (insert "\n")(forward-line -2))
-                     ;; Sort by name
-                     (org-table-goto-column 1)
-                     (org-table-sort-lines nil ?a))))                       
-              (t (user-error "Doesn't exist.")))))))
-
-
-    ;; (forward-line 2)
-    ;; (org-table-begin)
-    ;; (forward-line 2)
-    ;; (dolist (fentry db-foods)
-    ;;   (let ((fname (car fentry))
-    ;;         (pinfo (cdr fentry)))
-    ;;     (org-table-next-field)
-    ;;     (let* ((fname-present (substring-no-properties
-    ;;                            (string-trim (org-table-get-field))))
-    ;;            (fname-exists (and (> (length fname-present) 1)
-    ;;                               (alist-get fname-present db-foods))))
-    ;;       (if fname-exists
-    ;;           (forward-line 1)
-    ;;         ;; If this already exists in the db, check values
-    ;;         ;; Otherwise insert new
-    ;;         (insert fname)
-    ;;         (org-table-next-field)
-    ;;         (dolist (pper '(:kc :portion :carbs :fibre :sugars
-    ;;                             :protein :fat :sodium))
-    ;;           (let ((num (plist-get pinfo pper)))
-    ;;             (insert (format "%s" num))
-    ;;             (org-table-next-field)))))))
-    ;; (org-table-next-field)
-    ;; (org-table-sort-lines)))
-
+                       (insert (format "%d" cal))
+                       (org-table-next-field)))
+                   (database-trimandsort))))
+            (t (user-error "Doesn't exist."))))))
 
 (provide 'org-calories-database)
