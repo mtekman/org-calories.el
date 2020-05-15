@@ -50,9 +50,9 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
 
 (defun db-foods-retrieve (fname)
   "Retrieve food plist on FNAME from db."
-  (prog2 (database-generate 'foods)
-      (alist-get fname db-foods nil nil #'string-equal)
-    (database-sync 'foods)))
+  (database-generate 'foods)
+  (alist-get fname db-foods nil nil #'string-equal))
+
 
 
 (defun db-recipes-newentry (rname)
@@ -74,15 +74,19 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
     (database-sync 'recipes)))
 
 (defun db-recipes-retrieve (rname)
-  "Retrieve recipe plist on RNAME from db."
-  (prog2 (database-generate 'recipes)
-      (alist-get rname db-recipes nil nil #'string-equal)
-    (database-sync 'recipes)))
+  "Retrieve recipe plist on RNAME from db.  No need to sync."
+  (database-generate 'recipes)
+  (alist-get rname db-recipes nil nil #'string-equal))
 
 
-(defun db-exercises-newentry (ename))
 
-(defun db-exercise-insert (ename &optional plist-info)
+(defun db-exercises-newentry (ename)
+  "Create a new plist exercise entry named ENAME."
+  (let* ((result
+          (read-string (concat "[" ename "] -- Duration(Mins) and Calories(kC): "))))
+    (db-exercises-2plist (split-string result))))
+
+(defun db-exercises-insert (ename &optional plist-info)
   "Define exercise ENAME with PLIST-INFO of description, duration, and calories."
   (interactive "sExercise Name: ")
   (if (db-exercises-retrieve ename)
@@ -92,7 +96,10 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
      db-exercises :key #'car)
     (database-sync 'exercises)))
 
-(defun db-exercises-retrieve ())
+(defun db-exercises-retrieve (rname)
+  "Retrieve exercise RNAME from db."
+  (database-generate 'exercises)
+  (alist-get rname db-exercises nil nil #'string-equal))
 
 
 
