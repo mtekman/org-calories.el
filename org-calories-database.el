@@ -1,8 +1,8 @@
 (setq databasefile "~/database.org")
 
-(setq db-foods nil)
-(setq db-recipes nil)
-(setq db-exercises nil)
+(setq db-foods nil
+      db-recipes nil
+      db-exercises nil)
 
 (setq str-titled "#+TITLE: Database of Foods, Recipes, and Exercises"
       str-dbfood "* Individual Foods"
@@ -47,7 +47,7 @@
   (insert "\n\n"))
 
 (defun database-makeheaders ()
-  "Make table headers"
+  "Make table headers."
   (with-current-buffer (find-file-noselect databasefile)
     (goto-char 0)
     ;; Make Title if not found
@@ -196,6 +196,7 @@
                        (insert (format "%d" cal))
                        (org-table-next-field)))
                    (database-trimandsort))))
-            (t (user-error "Doesn't exist."))))))
+            (t (user-error "Doesn't exist")))
+      (message "synced %s to %s" type databasefile))))
 
 (provide 'org-calories-database)

@@ -10,7 +10,7 @@
       (unless (<= visiblecarbs carbs)
         (if (y-or-n-p
              (format
-              "Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg). Change Total Carbs to %sg?\n\
+              "Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg?\n\
 (Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)"
               fibre sugars carbs visiblecarbs))
             (setq carbs visiblecarbs)
@@ -29,12 +29,11 @@ This is not equal to the assigned %s kCal. Set Calories for this portion to  %s 
           :carbs ,carbs :fibre ,fibre :sugars ,sugars
           :protein ,protein :fat ,fat :sodium ,sodium)))
 
-
 (defun db-foods-newentry (fname)
   "Create a new plist food entry named FNAME."
   ;;(if (y-or-n-p "Search online? ") (online-retrieve fname)
   (let* ((result (read-string
-                  (concat "[" fname "] Enter kCals and Grams:\n\
+                  (concat "[" fname "] -- kCals and Grams:\n\
 kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
          (plistinp (db-foods-2plist (split-string result))))
     (db-foods-validateentry plistinp)))
@@ -57,8 +56,12 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
 
 
 (defun db-recipes-newentry (rname)
-  ;; TODO: Look at the food-newentry
-  "Insert new recipe RNAME.")
+  "Create a new plist recipe entry named RNAME."
+  (let* ((result
+          (read-string
+           (concat "[" rname "] -- pairs of\
+ food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
+    (db-recipes-2plist result)))
 
 (defun db-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
