@@ -1,3 +1,5 @@
+
+;;; Code:
 (setq databasefile "~/database.org")
 
 (setq db-foods nil
@@ -6,9 +8,9 @@
 
 (setq str-titled "#+TITLE: Database of Foods, Recipes, and Exercises"
       str-dbfood "* Individual Foods"
-      hed-dbfood "| Name | Calories (kC) | Portion(g) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |"
+      hed-dbfood "| Name | Portion(g) | Calories (kC) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |"
       str-dbrecp "* Recipes"
-      hed-dbrecp "| Name | Ingredients (Foods::Portion(g)[,,] |" ;; variable length nested list
+      hed-dbrecp "| Name | Amount (units) | Ingredients (Foods::Portion(g)[,,] |" ;; variable length nested list
       str-dbexer "* Exercises"
       hed-dbexer "| Name | Duration (mins) | Calories (kC) |")
 
@@ -18,18 +20,22 @@
 
 (defun db-foods-2plist (pin)
   "Convert a single entry list of PIN to food plist."
-  `(:kc ,(db-s2n 0 pin) :portion ,(db-s2n 1 pin)
-        :carbs ,(db-s2n 2 pin) :fibre ,(db-s2n 3 pin) :sugars ,(db-s2n 4 pin)
-        :protein ,(db-s2n 5 pin) :fat ,(db-s2n 6 pin) :sodium ,(db-s2n 7 pin)))
+  `(:portion ,(db-s2n 0 pin) :kc ,(db-s2n 1 pin)
+             :carbs ,(db-s2n 2 pin) :fibre ,(db-s2n 3 pin) :sugars ,(db-s2n 4 pin)
+             :protein ,(db-s2n 5 pin) :fat ,(db-s2n 6 pin) :sodium ,(db-s2n 7 pin)))
 
 (defun db-recipes-2plist (pin)
   "Convert a single entry list of PIN to recipes plist."
-  (let ((recipealist nil))
-    (dolist (ingredients (split-string pin ",,") recipealist)
+  (let* ((recipeamt (string-to-number (car pin)))
+         (recipealist nil))
+    (dolist (ingredients (split-string (cadr pin) ",,") recipealist)
       (let* ((portfood (split-string ingredients "::"))
              (food (nth 0 portfood))
              (port (string-to-number (nth 1 portfood))))
-        (push (list :food food :portion port) recipealist)))))
+        (push (list :food food :portion port) recipealist)))
+    ;; place amount at beginning of plist
+    (push `(:amount ,recipeamt) recipealist)))
+
 
 (defun db-exercises-2plist (pin)
   "Convert a single entry list of PIN to exercise plist."
@@ -95,7 +101,7 @@
                (if (re-search-forward org-table-line-regexp nil t)
                    (dolist (row (cddr (org-table-to-lisp)))
                      (let ((nam (car row))
-                           (pin (cadr row)))
+                           (pin (cdr row)))
                        (if (> (length nam) 1)
                            (cl-pushnew (cons nam (db-recipes-2plist pin))
                                        db-recipes
@@ -160,8 +166,8 @@
                    (dolist (entry db-foods)
                      (insert (car entry)) ;; food name
                      (org-table-next-field)
-                     (dolist (keyw '(:kc :portion :carbs :fibre :sugars
-                                         :protein :fat :sodium))
+                     (dolist (keyw '(:portion :kc  :carbs :fibre :sugars
+                                              :protein :fat :sodium))
                        (insert (format "%s" (plist-get (cdr entry) keyw)))
                        (org-table-next-field)))
                    (database-trimandsort))))
@@ -173,8 +179,11 @@
                    (dolist (entry db-recipes)
                      (insert (car entry)) ;; recipe name
                      (org-table-next-field)
+                     (insert (format ;; amount
+                              "%s" (plist-get (cadr entry) :amount)))
+                     (org-table-next-field)
                      (let ((inglist nil))
-                       (dolist (ingr (cdr entry))
+                       (dolist (ingr (cddr entry))
                          (let ((food (plist-get ingr :food))
                                (port (plist-get ingr :portion)))
                            (push (format "%s::%d" food port) inglist)))

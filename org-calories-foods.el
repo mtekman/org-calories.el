@@ -1,5 +1,6 @@
 (require 'org-calories-database)
 
+;;; Code:
 (defun db-foods-validateentry (pentry)
   "Checking the contents of PENTRY."
   (let ((judgement "Keeping inconsistency, but secretly judging you for it.")
@@ -21,11 +22,11 @@
              (format
               "[Calculation Error]\n\
   (4*((carbs - fibre) + protein)) + (7*fat) = (4*((%s - %s) + %s)) + (7*%s) = %s kCal\n\
-This is not equal to the assigned %s kCal. Set Calories for this portion to  %s kCal instead? "
+This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s kCal instead? "
               carbs fibre protein fat newkc kc newkc))
             (setq kc newkc)
           (message judgement))))
-    `(:kc ,kc :portion ,portion
+    `(:portion ,portion :kc ,kc
           :carbs ,carbs :fibre ,fibre :sugars ,sugars
           :protein ,protein :fat ,fat :sodium ,sodium)))
 
@@ -52,16 +53,15 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   "Retrieve food plist on FNAME from db."
   (database-generate 'foods)
   (alist-get fname db-foods nil nil #'string-equal))
-
-
-
+;;
+;;
 (defun db-recipes-newentry (rname)
   "Create a new plist recipe entry named RNAME."
   (let* ((result
           (read-string
-           (concat "[" rname "] -- pairs of\
+           (concat "[" rname "] -- amount, then pairs of\
  food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
-    (db-recipes-2plist result)))
+    (db-recipes-2plist (split-string result))))
 
 (defun db-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
@@ -77,9 +77,8 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   "Retrieve recipe plist on RNAME from db.  No need to sync."
   (database-generate 'recipes)
   (alist-get rname db-recipes nil nil #'string-equal))
-
-
-
+;;
+;;
 (defun db-exercises-newentry (ename)
   "Create a new plist exercise entry named ENAME."
   (let* ((result
@@ -100,7 +99,6 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   "Retrieve exercise RNAME from db."
   (database-generate 'exercises)
   (alist-get rname db-exercises nil nil #'string-equal))
-
 
 
 ;;;; -{Tests}-
