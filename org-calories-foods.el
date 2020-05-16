@@ -109,3 +109,5 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
 ;; (db-foods-insert "chew")
 ;; (db-recipes-insert "fruit salad" '((:food "fruit1" :portion 30) (:food "fruit2" :portion 120) (:food "fruit3" :portion 50)))
 ;; (db-recipes-retrieve "fruit salad")
+(provide 'org-calories-food)
+;;; org-calories-foods.el ends here

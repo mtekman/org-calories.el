@@ -15,8 +15,23 @@
       hed-dbexer "| Name | Duration (mins) | Calories (kC) |")
 
 (defsubst db-s2n (num pin)
-  "String 2 Num. Extract the NUM index from PIN, zip it in and zip it out."
+  "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
   (string-to-number (nth num pin)))
+
+(defun db-scale-item (type plist-info amount)
+  "For item TYPE, scale PLIST-INFO data by AMOUNT."
+  (let* ((scalefield (cond ((eq type 'foods) :portion)
+                           ((eq type 'recipes) :amount)
+                           ((eq type 'exercises) :duration)
+                           (t (user-error "Type not found"))))
+         (scaleamount (plist-get plist-info scalefield))
+         (scalefractn (/ (float scaleamount) amount))
+         (newplist nil))
+    (dolist (var (reverse plist-info) newplist)
+      (if (keywordp var)
+          (push var newplist)
+        (push (round (/ (float var) scalefractn)) newplist)))))
+
 
 (defun db-foods-2plist (pin)
   "Convert a single entry list of PIN to food plist."
@@ -116,7 +131,7 @@
                            (cl-pushnew (cons nam (db-exercises-2plist pin))
                                        db-exercises
                                        :test #'string= :key #'car)))))))
-          (t (user-error "Doesn't exist.")))))
+          (t (user-error "Doesn't exist")))))
 
 
 (defun database-table-to-list (type)
@@ -206,6 +221,7 @@
                        (org-table-next-field)))
                    (database-trimandsort))))
             (t (user-error "Doesn't exist")))
+      (save-buffer)
       (message "synced %s to %s" type databasefile))))
 
 (provide 'org-calories-database)

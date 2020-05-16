@@ -1,3 +1,5 @@
+(require 'org-calories-database)
+
 (setq logbookfile "~/logbook.org")
 
 (setq str-ltitled "#+TITLE: Daily Logs"
@@ -25,7 +27,7 @@
             ;; insert just month
             (insert (format "\n%s\n" hed-month)))
         ;; otherwise insert year and month at end of buffer
-        (end-of-buffer)
+        (goto-char (point-max))
         (insert (format "\n%s\n%s\n" hed-year hed-month)))
       ;; Search for headers
       ;; Search for macros table
