@@ -41,15 +41,14 @@
 
 (defun db-recipes-2plist (pin)
   "Convert a single entry list of PIN to recipes plist."
-  (let* ((recipeamt (string-to-number (car pin)))
-         (recipealist nil))
-    (dolist (ingredients (split-string (cadr pin) ",,") recipealist)
+  (let ((recipeamt (string-to-number (car pin)))
+        (recipeingrd nil))
+    (dolist (ingredients (split-string (cadr pin) ",,"))
       (let* ((portfood (split-string ingredients "::"))
              (food (nth 0 portfood))
              (port (string-to-number (nth 1 portfood))))
-        (push (list :food food :portion port) recipealist)))
-    ;; place amount at beginning of plist
-    (push `(:amount ,recipeamt) recipealist)))
+        (push (list :food food :portion port) recipeingrd)))
+    (list :amount recipeamt :ingredients recipeingrd)))
 
 
 (defun db-exercises-2plist (pin)
@@ -101,37 +100,29 @@
   (with-current-buffer (find-file-noselect databasefile)
     ;; Parse Tables
     (goto-char 0)
-    (cond ((eq type 'foods)
-           (if (search-forward str-dbfood nil t)
-               (if (re-search-forward org-table-line-regexp nil t)
-                   (dolist (row (cddr (org-table-to-lisp)))
-                     (let ((nam (car row))
-                           (pin (cdr row)))
-                       (if (> (length nam) 1)
-                           (cl-pushnew (cons nam (db-foods-2plist pin))
-                                       db-foods
-                                       :test #'string= :key #'car)))))))
-          ((eq type 'recipes)
-           (if (search-forward str-dbrecp nil t)
-               (if (re-search-forward org-table-line-regexp nil t)
-                   (dolist (row (cddr (org-table-to-lisp)))
-                     (let ((nam (car row))
-                           (pin (cdr row)))
-                       (if (> (length nam) 1)
-                           (cl-pushnew (cons nam (db-recipes-2plist pin))
-                                       db-recipes
-                                       :test #'string= :key #'car)))))))
-          ((eq type 'exercises)
-           (if (search-forward str-dbexer nil t)
-               (if (re-search-forward org-table-line-regexp nil t)
-                   (dolist (row (cddr (org-table-to-lisp)))
-                     (let ((nam (car row))
-                           (pin (cdr row)))
-                       (if (> (length nam) 1)
-                           (cl-pushnew (cons nam (db-exercises-2plist pin))
-                                       db-exercises
-                                       :test #'string= :key #'car)))))))
-          (t (user-error "Doesn't exist")))))
+    (let ((sstring nil)
+          (s2plist nil)
+          (dbsymbl nil))
+      (cond ((eq type 'foods) (setq sstring str-dbfood
+                                    s2plist #'db-foods-2plist
+                                    dbsymbl 'db-foods))
+            ((eq type 'recipes) (setq sstring str-dbrecp
+                                      s2plist #'db-recipes-2plist
+                                      dbsymbl 'db-recipes))
+            ((eq type 'exercises) (setq sstring str-dbexer
+                                        s2plist #'db-exercises-2plist
+                                        dbsymbl 'db-exercises))
+            (t (user-error "Doesn't exist")))
+      ;;
+      (if (search-forward sstring nil t)
+          (if (re-search-forward org-table-line-regexp nil t)
+              (dolist (row (cddr (org-table-to-lisp)))
+                (let ((nam (car row))
+                      (pin (cdr row)))
+                  (if (> (length nam) 1)
+                      (cl-pushnew (cons nam (funcall s2plist pin))
+                                  (symbol-value dbsymbl)
+                                  :test #'string= :key #'car)))))))))
 
 
 (defun database-table-to-list (type)
@@ -176,6 +167,8 @@
       (cond ((eq type 'foods)
              (if (search-forward str-dbfood nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
+                   (unless db-foods
+                     (user-error "db-foods not populated, quitting"))
                    (database-kill-table)
                    ;; Dump current food database
                    (dolist (entry db-foods)
@@ -189,16 +182,18 @@
             ((eq type 'recipes)
              (if (search-forward str-dbrecp nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
+                   (unless db-recipes
+                     (user-error "db-recipes not populated, quitting"))
                    (database-kill-table)
                    ;; Dump current recipes database
                    (dolist (entry db-recipes)
                      (insert (car entry)) ;; recipe name
                      (org-table-next-field)
                      (insert (format ;; amount
-                              "%s" (plist-get (cadr entry) :amount)))
+                              "%s" (plist-get (cdr entry) :amount)))
                      (org-table-next-field)
                      (let ((inglist nil))
-                       (dolist (ingr (cddr entry))
+                       (dolist (ingr (plist-get (cdr entry) :ingredients))
                          (let ((food (plist-get ingr :food))
                                (port (plist-get ingr :portion)))
                            (push (format "%s::%d" food port) inglist)))
@@ -208,6 +203,8 @@
             ((eq type 'exercises)
              (if (search-forward str-dbexer nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
+                   (unless db-exercises
+                     (user-error "db-exercises not populated, quitting"))
                    (database-kill-table)
                    ;; Dump current exercise database
                    (dolist (entry db-exercises)

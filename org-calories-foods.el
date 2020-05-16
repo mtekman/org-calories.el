@@ -62,7 +62,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
            (concat "[" rname "] -- amount, then pairs of\
  food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
     (db-recipes-2plist (split-string result))))
-
+ 
 (defun db-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
   (interactive "sRecipe Name: ")
