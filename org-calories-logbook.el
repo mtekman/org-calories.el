@@ -36,3 +36,65 @@
       ;; Search for logs table
       (unless (search-forward tbl-macros nil t)
         (database-maketable str-daylogs tbl-logs hed-daylogs)))))
+
+
+(defun logbook-completions (type)
+  "Produce completion keys for TYPE."
+  (database-generate type)
+  (--map (car it)
+         (cond ((eq type 'foods) db-foods)
+               ((eq type 'recipes) db-recipes)
+               ((eq type 'exercises) db-exercises)
+               (t (user-error "Not an option")))))
+
+
+(defun logbook-log-food (food)
+  "Log FOOD."
+  (interactive
+   (list (completing-read
+          "Food: "
+          (logbook-completions 'foods))))
+  ;;
+  (let ((food-entry (db-foods-retrieve food))
+        (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
+        (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
+    (unless food-entry
+      (if (y-or-n-p (format
+                     "Food '%s' does not exist, insert new food? "
+                     food))
+          (db-foods-insert food)))
+    ;; Continue with logging.
+    (logbook-makeheaders)
+    (unless (search-forward tbl-logs nil t)
+      (user-error "Could not find table %s.  Please check your logbook" tbl-logs))
+    ;; Currently at table head
+    (forward-line 1)
+    (goto-char (org-table-begin))
+    (forward-line 2)
+    (org-table-next-field)
+    ;; At first empty
+    (org-insert-time-stamp (current-time) t)
+    (org-table-next-field)
+    (insert (capitalize (format "%s" 'food)))
+    (org-table-next-field)
+    (insert food)
+    (org-table-next-field)
+    (let* ((portion (read-number
+                     (message (format
+                               "[%s] -- %s\nWhat portion of food (g)? "
+                               food
+                               (db-foods-retrieve food)))))
+           (scaled-food (db-scale-item 'foods food-entry portion))
+           (scaled-calories (plist-get scaled-food :kc)))
+      (insert (format "%d" scaled-calories)))))
+
+
+  (message "inserting %s" food))
+
+
+
+(provide 'org-calories-logbook)
+;;; org-calories-logbook.el ends here
+
+
+;;TODO Fix sync recipes
