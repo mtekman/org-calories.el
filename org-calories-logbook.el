@@ -6,7 +6,7 @@
       str-targets "*** Targets / Macros"
       hed-targets "| Type | Daily [Min,Max] | Weekly [Min,Max] | Monthly [Min,Max] |"
       str-daylogs "*** Logs"
-      hed-daylogs "| Timestamp | Type | Item | Amount(g) | Calories(kC) |")
+      hed-daylogs "| Timestamp | Type | Item | Amount | Calories(kC) |")
 
 (defun logbook-makeheaders ()
   "Make table headers."
@@ -99,16 +99,16 @@
                           (logbook-completions 'foods))))
   (logbook-log-prelog 'foods food)
   ;; At first empty
-  (let* ((amount-want (or portion (read-number (message (format
+  (let* ((food-info (db-foods-retrieve food))
+         (amount-want (or portion (read-number (message (format
                                   "[%s] -- %s\nWhat portion of food (g)? "
-                                  food
-                                  (db-foods-retrieve food))))))
-         (scaled-food (db-scale-item 'foods food-entry amount-want))
+                                  food food-info)))))
+         (scaled-food (db-scale-item 'foods food-info amount-want))
          (scaled-calories (plist-get scaled-food :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect logbookfile)
       (logbook-goto-tableend)
-      (logbook-log-insert 'food food amount scaled-calories)
+      (logbook-log-insert 'foods food amount-want scaled-calories)
       (database-trimandsort)
       (save-buffer))))
 
