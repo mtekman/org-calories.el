@@ -51,7 +51,13 @@
   "Jump to end of table for insertion."
   (forward-line 1)
   (goto-char (org-table-end))
-  (insert "| "))
+  (let* ((lbeg (line-beginning-position))
+         (lend (line-end-position))
+         (line-contents (string-trim (buffer-substring-no-properties
+                                      lbeg lend))))
+    (if (string= "|" line-contents) ;; wipe line
+        (setf (buffer-substring lbeg lend) "")
+      (insert "| "))))
 
 (defun logbook-log-insert (type item amount calories)
   "In the logbook insert a row with TYPE, ITEM, AMOUNT, and CALORIES."

@@ -21,14 +21,12 @@
 (defun db-scale-item (type plist-info amount)
   "For item TYPE, scale PLIST-INFO data by AMOUNT."
   (let* ((scalefield (cond ((eq type 'foods) :portion)
-                           ((eq type 'recipes) :amount)
+                           ((eq type 'recipes) :amount) ;;-- not used
                            ((eq type 'exercises) :duration)
-                           (t (user-error "Type not found"))))
+                           (t (user-error "Scale type not found"))))
          (scaleamount (plist-get plist-info scalefield))
          (scalefractn (/ (float scaleamount) amount))
          (newplist nil))
-    ;; TODO: Fix this for recipes, we need to recurse into
-    ;;       the food portions
     (dolist (var (reverse plist-info) newplist)
       (if (keywordp var)
           (push var newplist)
@@ -114,7 +112,7 @@
             ((eq type 'exercises) (setq sstring str-dbexer
                                         s2plist #'db-exercises-2plist
                                         dbsymbl 'db-exercises))
-            (t (user-error "Doesn't exist")))
+            (t (user-error "Database type doesn't exist")))
       ;;
       (if (search-forward sstring nil t)
           (if (re-search-forward org-table-line-regexp nil t)
@@ -127,17 +125,17 @@
                                   :test #'string= :key #'car)))))))))
 
 
-(defun database-table-to-list (type)
-  (let* ((tdata (org-table-to-lisp))
-         (fdata (cddr tdata))
-         (parser (cond ((eq type 'foods) #'db-foods-2plist)
-                       ((eq type 'recipes) #'db-recipes-2plist)
-                       (t (user-error "Doesn't exist."))))
-         (res-alist nil))
-    (dolist (ldata fdata res-alist)
-      (let ((fname (car ldata))
-            (fdata (funcall parser (cdr ldata))))
-        (pushnew (cons fname fdata) res-alist :key #'car)))))
+;; (defun database-table-to-list (type)
+;;   (let* ((tdata (org-table-to-lisp))
+;;          (fdata (cddr tdata))
+;;          (parser (cond ((eq type 'foods) #'db-foods-2plist)
+;;                        ((eq type 'recipes) #'db-recipes-2plist)
+;;                        (t (user-error "Doesn't exist."))))
+;;          (res-alist nil))
+;;     (dolist (ldata fdata res-alist)
+;;       (let ((fname (car ldata))
+;;             (fdata (funcall parser (cdr ldata))))
+;;         (pushnew (cons fname fdata) res-alist :key #'car)))))
 
 
 (defun database-kill-table ()

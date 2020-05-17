@@ -62,7 +62,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
            (concat "[" rname "] -- amount, then pairs of\
  food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
     (db-recipes-2plist (split-string result))))
- 
+
 (defun db-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
   (interactive "sRecipe Name: ")
@@ -77,6 +77,36 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   "Retrieve recipe plist on RNAME from db.  No need to sync."
   (database-generate 'recipes)
   (alist-get rname db-recipes nil nil #'string-equal))
+
+(defun db-foods-add (finfo1 finfo2)
+  "Add food info FINFO1 and FINFO2.  Foods should be scaled first."
+  (let ((adder (lambda (f1 f2 kw)(+ (plist-get f1 kw)
+                               (plist-get f2 kw)))))
+    (if (and finfo1 finfo2)
+        (list :portion (funcall adder finfo1 finfo2 :portion)
+              :kc (funcall adder finfo1 finfo2 :kc)
+              :carbs (funcall adder finfo1 finfo2 :carbs)
+              :fibre (funcall adder finfo1 finfo2 :fibre)
+              :sugars (funcall adder finfo1 finfo2 :sugars)
+              :protein (funcall adder finfo1 finfo2 :protein)
+              :fat (funcall adder finfo1 finfo2 :fat)
+              :sodium (funcall adder finfo1 finfo2 :sodium))
+      ;; return one or the other
+      (or finfo1 finfo2))))
+;;
+(defun db-recipes-calculate (recipe-info)
+  "Calculate the food content of the ingredients given by RECIPE-INFO."
+  (let ((amount-native (plist-get recipe-info :amount))
+        (food-total nil))
+    (dolist (var (plist-get recipe-info :ingredients))
+      (let* ((foodname (plist-get var :food))
+             (fportion (plist-get var :portion))
+             (foodinfo (db-foods-retrieve foodname))
+             (foodscal (db-scale-item 'foods foodinfo fportion)))
+        (setq food-total (db-foods-add food-total foodscal))))
+    ;; here we add a new field to make it recipe compliant
+    (setq food-total (plist-put food-total :amount amount-native))
+    food-total))
 ;;
 ;;
 (defun db-exercises-newentry (ename)
