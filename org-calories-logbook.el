@@ -4,7 +4,7 @@
 
 (setq str-ltitled "#+TITLE: Daily Logs"
       str-targets "*** Targets / Macros"
-      hed-targets "| Type | Daily [Min,Max] | Weekly [Min,Max] | Monthly [Min,Max] |"
+      hed-targets "| Dailies | Min | Max |"
       str-daylogs "*** Logs"
       hed-daylogs "| Timestamp | Type | Item | Amount | Calories(kC) |")
 
@@ -32,7 +32,13 @@
         ;; Search for headers
         ;; Search for macros table
         (unless (search-forward tbl-macros nil t)
-          (database-maketable str-targets tbl-macros hed-targets))
+          (database-maketable str-targets tbl-macros hed-targets)
+          (forward-line -2)
+          (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
+          (dolist (var '(kC Carbs Fibre Sugars Protein Fat Exercise Water))
+            (insert (format "| %s\n" var)))
+          (forward-line -1)
+          (org-table-align))
         ;; Search for logs table
         (unless (search-forward tbl-logs nil t)
           (database-maketable str-daylogs tbl-logs hed-daylogs))))))
