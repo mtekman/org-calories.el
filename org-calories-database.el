@@ -27,6 +27,8 @@
          (scaleamount (plist-get plist-info scalefield))
          (scalefractn (/ (float scaleamount) amount))
          (newplist nil))
+    ;; TODO: Fix this for recipes, we need to recurse into
+    ;;       the food portions
     (dolist (var (reverse plist-info) newplist)
       (if (keywordp var)
           (push var newplist)

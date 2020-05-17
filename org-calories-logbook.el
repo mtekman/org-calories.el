@@ -47,6 +47,24 @@
                ((eq type 'exercises) db-exercises)
                (t (user-error "Not an option")))))
 
+(defun logbook-goto-tableend ()
+  "Jump to end of table for insertion."
+  (forward-line 1)
+  (goto-char (org-table-end))
+  (insert "| "))
+
+(defun logbook-log-insert (type item amount calories)
+  "In the logbook insert a row with TYPE, ITEM, AMOUNT, and CALORIES."
+  (org-insert-time-stamp (current-time) t)
+  (org-table-next-field)
+  (insert (capitalize (format "%s" type)))
+  (org-table-next-field)
+  (insert item)
+  (org-table-next-field)
+  (insert (format "%d" amount))
+  (org-table-next-field)
+  (insert (format "%d" calories))
+  (org-table-next-field))
 
 (defun logbook-log-food (food)
   "Log FOOD entry."
@@ -79,6 +97,36 @@
         (database-trimandsort)
         (save-buffer)))))
 
+(defun logbook-log-recipe (recipe)
+  "Log RECIPE entry."
+  (interactive
+   (list (completing-read "Recipe: "
+                          (logbook-completions 'recipes))))
+  (let ((recipe-entry (db-recipes-retrieve recipe))
+        (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
+        (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
+    (unless recipe-entry
+      (if (y-or-n-p (format "Recipe '%s' does not exist, insert new Recipe? "
+                            recipe))
+          (db-recipes-insert recipe)))
+    (logbook-makeheaders)
+    (with-current-buffer (find-file-noselect logbookfile)
+      (goto-char 0)
+      (unless (search-forward tbl-logs nil t)
+        (user-error "Could not find table %s.  Please check your logbook"
+                    tbl-logs))
+      ;; At first empty
+      (let* ((amount (read-number (message (format
+                     "[%s] -- %s\nWhat portion of recipe (g)? "
+                     recipe
+                     (db-recipes-retrieve recipe)))))
+             (scaled-recipe (db-scale-item 'recipe recipe-entry amount))
+             (scaled-calories (plist-get scaled-recipe :kc)))
+        ;; Currently at table head
+        (logbook-goto-tableend)
+        (logbook-log-insert 'recipes recipe amount scaled-calories)
+        (database-trimandsort)
+        (save-buffer)))))
 
 
 (provide 'org-calories-logbook)
