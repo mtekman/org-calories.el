@@ -67,106 +67,91 @@
   (org-table-next-field)
   (insert item)
   (org-table-next-field)
-  (insert (format "%d" amount))
+  (insert (format (if (floatp amount) "%.2f" "%d") amount))
   (org-table-next-field)
-  (insert (format "%d" calories))
+  (insert (format "%d" calories)) ;; fractional calories would be pointless here
   (org-table-next-field))
 
-(defun logbook-log-food (food)
-  "Log FOOD entry."
-  (interactive
-   (list (completing-read "Food: "
-                          (logbook-completions 'foods))))
-  (let ((food-entry (db-foods-retrieve food))
-        (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
-        (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
-    (unless food-entry
-      (if (y-or-n-p (format "Food '%s' does not exist, insert new food? "
-                            food))
-          (db-foods-insert food)))
+(defun logbook-log-prelog (type name)
+  "Preamble for importing NAME of TYPE, and finding the right table."
+  (let* ((captype (capitalize (format "%s" type)))
+         (funcretr (intern (format "db-%s-retrieve" type)))
+         (funcinst (intern (format "db-%s-insert" type)))
+         (type-entry (funcall funcretr name))
+         (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
+         (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
+    (unless type-entry
+      (if (y-or-n-p (format "%s '%s' does not exist, insert new %s? "
+                            captype name captype))
+          (funcall funcinst name)))
     (logbook-makeheaders)
     (with-current-buffer (find-file-noselect logbookfile)
       (goto-char 0)
       (unless (search-forward tbl-logs nil t)
         (user-error "Could not find table %s.  Please check your logbook"
-                    tbl-logs))
-      ;; At first empty
-      (let* ((amount (read-number (message (format
-                     "[%s] -- %s\nWhat portion of food (g)? "
-                     food
-                     (db-foods-retrieve food)))))
-             (scaled-food (db-scale-item 'foods food-entry amount))
-             (scaled-calories (plist-get scaled-food :kc)))
-        ;; Currently at table head
-        (logbook-goto-tableend)
-        (logbook-log-insert 'food food amount scaled-calories)
-        (database-trimandsort)
-        (save-buffer)))))
+                    tbl-logs)))))
+
+
+(defun logbook-log-food (food &optional portion)
+  "Log FOOD entry with PORTION."
+  (interactive
+   (list (completing-read "Food: "
+                          (logbook-completions 'foods))))
+  (logbook-log-prelog 'foods food)
+  ;; At first empty
+  (let* ((amount-want (or portion (read-number (message (format
+                                  "[%s] -- %s\nWhat portion of food (g)? "
+                                  food
+                                  (db-foods-retrieve food))))))
+         (scaled-food (db-scale-item 'foods food-entry amount-want))
+         (scaled-calories (plist-get scaled-food :kc)))
+    ;; Currently at table head
+    (with-current-buffer (find-file-noselect logbookfile)
+      (logbook-goto-tableend)
+      (logbook-log-insert 'food food amount scaled-calories)
+      (database-trimandsort)
+      (save-buffer))))
 
 (defun logbook-log-recipe (recipe &optional portion)
   "Log RECIPE entry with optional PORTION."
   (interactive
    (list (completing-read "Recipe: " (logbook-completions 'recipes))))
-  (let ((recipe-entry (db-recipes-retrieve recipe))
-        (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
-        (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
-    (unless recipe-entry
-      (if (y-or-n-p (format "Recipe '%s' does not exist, insert new Recipe? "
-                            recipe))
-          (db-recipes-insert recipe)))
-    (logbook-makeheaders)
+  (logbook-log-prelog 'recipes recipe)
+  (let* ((recipe-info (db-recipes-retrieve recipe))
+         (amount-want (or portion (read-number (message (format
+                                  "[%s] -- %s\nWhat amount of recipe? "
+                                  recipe recipe-info)))))
+         ;; the above has portion value of -1, but is the total
+         ;; food value of the native portion of that recipe
+         (calced-recipe (db-recipes-calculate recipe-info))
+         (scaled-recipe (db-scale-item 'recipes calced-recipe amount-want))
+         (scaled-calories (plist-get scaled-recipe :kc)))
+    ;; Currently at table head
     (with-current-buffer (find-file-noselect logbookfile)
-      (goto-char 0)
-      (unless (search-forward tbl-logs nil t)
-        (user-error "Could not find table %s.  Please check your logbook"
-                    tbl-logs))
-      (let* ((recipe-info (db-recipes-retrieve recipe))
-             (amount-want (or portion
-                              (read-number
-                               (message (format
-                                         "[%s] -- %s\nWhat amount of recipe? "
-                                         recipe recipe-info)))))
-             ;; the above has portion value of -1, but is the total
-             ;; food value of the native portion of that recipe
-             (calced-recipe (db-recipes-calculate recipe-info))
-             (scaled-recipe (db-scale-item 'recipes calced-recipe amount-want))
-             (scaled-calories (plist-get scaled-recipe :kc)))
-        ;; Currently at table head
-        (logbook-goto-tableend)
-        (logbook-log-insert 'recipes recipe amount-want scaled-calories)
-        (database-trimandsort)
-        (save-buffer)))))
+      (logbook-goto-tableend)
+      (logbook-log-insert 'recipes recipe amount-want scaled-calories)
+      (database-trimandsort)
+      (save-buffer))))
 
 (defun logbook-log-exercise (exercise &optional duration)
   "Log EXERCISE entry with optional DURATION."
   (interactive
    (list (completing-read "Exercise: " (logbook-completions 'exercises))))
-  (let ((exercise-entry (db-exercises-retrieve exercise))
-        (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
-        (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
-    (unless exercise-entry
-      (if (y-or-n-p (format "Exercise '%s' does not exist, insert new Exercise? "
-                            exercise))
-          (db-exercises-insert exercise)))
-    (logbook-makeheaders)
+  (logbook-log-prelog 'exercises exercise)
+  (let* ((exercise-info (db-exercises-retrieve exercise))
+         (amount-want (or duration
+                          (read-number
+                           (message (format
+                                     "[%s] -- %s\nWhat amount of exercise? "
+                                     exercise exercise-info)))))
+         (scaled-exercise (db-scale-item 'exercises exercise-info amount-want))
+         (scaled-calories (plist-get scaled-exercise :kc)))
+    ;; Currently at table head
     (with-current-buffer (find-file-noselect logbookfile)
-      (goto-char 0)
-      (unless (search-forward tbl-logs nil t)
-        (user-error "Could not find table %s.  Please check your logbook"
-                    tbl-logs))
-      (let* ((exercise-info (db-exercises-retrieve exercise))
-             (amount-want (or duration
-                              (read-number
-                               (message (format
-                                         "[%s] -- %s\nWhat amount of exercise? "
-                                         exercise exercise-info)))))
-             (scaled-exercise (db-scale-item 'exercises exercise-info amount-want))
-             (scaled-calories (plist-get scaled-exercise :kc)))
-        ;; Currently at table head
-        (logbook-goto-tableend)
-        (logbook-log-insert 'exercises exercise amount-want scaled-calories)
-        (database-trimandsort)
-        (save-buffer)))))
+      (logbook-goto-tableend)
+      (logbook-log-insert 'exercises exercise amount-want scaled-calories)
+      (database-trimandsort)
+      (save-buffer))))
 
 
 (provide 'org-calories-logbook)
