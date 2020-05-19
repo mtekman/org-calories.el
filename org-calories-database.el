@@ -22,15 +22,15 @@
   "For item TYPE, scale PLIST-INFO data by AMOUNT."
   (let* ((scalefield (cond ((eq type 'foods) :portion)
                            ((eq type 'recipes) :amount) ;;-- not used
-                           ((eq type 'exercises) :duration)
+                           ((eq type 'exercises) :amount)
                            (t (user-error "Scale type not found"))))
          (scaleamount (plist-get plist-info scalefield))
          (scalefractn (/ (float scaleamount) amount))
          (newplist nil))
     (dolist (var (reverse plist-info) newplist)
-      (if (keywordp var)
-          (push var newplist)
-        (push (round (/ (float var) scalefractn)) newplist)))))
+      (if (numberp var)
+          (push (round (/ (float var) scalefractn)) newplist)
+        (push var newplist))))) ;; keywords or strings
 
 
 (defun db-foods-2plist (pin)
@@ -53,7 +53,12 @@
 
 (defun db-exercises-2plist (pin)
   "Convert a single entry list of PIN to exercise plist."
-  `(:duration ,(db-s2n 0 pin) :kc ,(db-s2n 1 pin)))
+  (let ((unit (--> (nth 1 pin)
+                   (cond ((string= it "mins") 'mins)
+                         ((string= it "lots") 'lots)
+                         (t (user-error "'%s' not a valid exercise unit.\
+  Please use either 'mins' or 'lots'" it))))))
+    `(:amount ,(db-s2n 0 pin) :unit ,unit :kc ,(db-s2n 2 pin))))
 
 (defun database-maketable (section title header)
   "Insert table with SECTION, TITLE, and HEADER."
@@ -210,9 +215,12 @@
                    (dolist (entry db-exercises)
                      (insert (car entry)) ;; exercise name
                      (org-table-next-field)
-                     (let ((dur (plist-get (cdr entry) :duration))
+                     (let ((dur (plist-get (cdr entry) :amount))
+                           (unt (plist-get (cdr entry) :unit))
                            (cal (plist-get (cdr entry) :kc)))
                        (insert (format "%d" dur))
+                       (org-table-next-field)
+                       (insert (format "%s" unt))
                        (org-table-next-field)
                        (insert (format "%d" cal))
                        (org-table-next-field)))

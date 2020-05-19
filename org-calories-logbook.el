@@ -139,17 +139,17 @@
       (database-trimandsort)
       (save-buffer))))
 
-(defun logbook-log-exercise (exercise &optional duration)
-  "Log EXERCISE entry with optional DURATION."
+(defun logbook-log-exercise (exercise &optional amount)
+  "Log EXERCISE entry with optional AMOUNT.
+The unit does not actually matter because it's set by the database and we are just scaling it."
   (interactive
    (list (completing-read "Exercise: " (logbook-completions 'exercises))))
   (logbook-log-prelog 'exercises exercise)
   (let* ((exercise-info (db-exercises-retrieve exercise))
-         (amount-want (or duration
-                          (read-number
-                           (message (format
-                                     "[%s] -- %s\nWhat amount of exercise? "
-                                     exercise exercise-info)))))
+         (amount-want (or amount
+                          (read-number (message (format
+                           "[%s] -- %s\nWhat amount of exercise? "
+                           exercise exercise-info)))))
          (scaled-exercise (db-scale-item 'exercises exercise-info amount-want))
          (scaled-calories (plist-get scaled-exercise :kc)))
     ;; Currently at table head
