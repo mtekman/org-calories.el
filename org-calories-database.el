@@ -10,9 +10,9 @@
       str-dbfood "* Individual Foods"
       hed-dbfood "| Name | Portion(g) | Calories (kC) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |"
       str-dbrecp "* Recipes"
-      hed-dbrecp "| Name | Amount (units) | Ingredients (Foods::Portion(g)[,,] |" ;; variable length nested list
+      hed-dbrecp "| Name | Amount | Ingredients (Foods::Portion(g)[,,] |" ;; variable length nested list
       str-dbexer "* Exercises"
-      hed-dbexer "| Name | Duration (mins) | Calories (kC) |")
+      hed-dbexer "| Name | Amount | Unit | Calories (kC) |")
 
 (defsubst db-s2n (num pin)
   "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
@@ -158,7 +158,7 @@
   (org-table-sort-lines nil ?a))
 
 (defun database-sync (type)
-  "Sync db-foods to db-foods file."
+  "Sync db TYPE back to database file."
   (database-makeheaders)
   (with-current-buffer (find-file-noselect databasefile)
     ;; Parse Tables
