@@ -2,6 +2,12 @@
 
 ;; Copyright (C) 2020 Mehmet Tekman <mtekman89@gmail.com>
 
+;; Author: Mehmet Tekman
+;; URL: https://github.com/mtekman/org-calories.el
+;; Keywords: outlines
+;; Package-Requires: ((emacs "26.1") (dash "2.17.0") (org "9.1.6"))
+;; Version: 0.1
+
 ;;; License:
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -19,19 +25,26 @@
 ;; See org-calories.el
 
 ;;; Code:
-(setq databasefile "~/database.org")
+(require 'org-table)
+(require 'subr-x)
+(require 'dash)
 
-(setq db-foods nil
-      db-recipes nil
-      db-exercises nil)
+(defcustom org-calories-db-file "~/database.org"
+  "Location of database file."
+  :group 'org-calories
+  :type 'string)
 
-(defconst str-titled "#+TITLE: Database of Foods, Recipes, and Exercises")
-(defconst str-dbfood "* Individual Foods")
-(defconst hed-dbfood "| Name | Portion(g) | Calories (kC) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
-(defconst str-dbrecp "* Recipes")
-(defconst hed-dbrecp "| Name | Amount | Ingredients (Foods::Portion(g)[,,] |") ;; variable length nested list
-(defconst str-dbexer "* Exercises")
-(defconst hed-dbexer "| Name | Amount | Unit | Calories (kC) |")
+(defvar org-calories-db--foods nil)
+(defvar org-calories-db--recipes nil)
+(defvar org-calories-db--exercises nil)
+
+(defconst org-calories-db--str-titled "#+TITLE: Database of Foods, Recipes, and Exercises")
+(defconst org-calories-db--str-dbfood "* Individual Foods")
+(defconst org-calories-db--hed-dbfood "| Name | Portion(g) | Calories (kC) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
+(defconst org-calories-db--str-dbrecp "* Recipes")
+(defconst org-calories-db--hed-dbrecp "| Name | Amount | Ingredients (Foods::Portion(g)[,,] |") ;; variable length nested list
+(defconst org-calories-db--str-dbexer "* Exercises")
+(defconst org-calories-db--hed-dbexer "| Name | Amount | Unit | Calories (kC) |")
 
 (defsubst org-calories-db--s2n (num pin)
   "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
@@ -93,50 +106,50 @@
 
 (defun org-calories-db--makeheaders ()
   "Make table headers."
-  (with-current-buffer (find-file-noselect databasefile)
+  (with-current-buffer (find-file-noselect org-calories-db-file)
     (goto-char 0)
     ;; Make Title if not found
-    (unless (search-forward str-titled nil t)
-      (insert str-titled)
+    (unless (search-forward org-calories-db--str-titled nil t)
+      (insert org-calories-db--str-titled)
       (insert "\n\n"))
     ;; Make Food, before Recipe
-    (if (search-forward str-dbfood nil t)
-        (if (search-forward str-dbrecp nil t)
+    (if (search-forward org-calories-db--str-dbfood nil t)
+        (if (search-forward org-calories-db--str-dbrecp nil t)
             (progn (beginning-of-line)
                    (forward-line -1))
-          (end-of-buffer))
-      (org-calories-db--maketable str-dbfood "Foods" hed-dbfood))
+          (goto-char (point-max)))
+      (org-calories-db--maketable org-calories-db--str-dbfood "Foods" org-calories-db--hed-dbfood))
     ;; Make Recipe, vor Exercises
-    (if (search-forward str-dbrecp nil t)
-        (if (search-forward str-dbexer nil t)
+    (if (search-forward org-calories-db--str-dbrecp nil t)
+        (if (search-forward org-calories-db--str-dbexer nil t)
             (progn (beginning-of-line)
                    (forward-line -1))
-          (end-of-buffer))
-      (org-calories-db--maketable str-dbrecp "Recipes" hed-dbrecp))
+          (goto-char (point-max)))
+      (org-calories-db--maketable org-calories-db--str-dbrecp "Recipes" org-calories-db--hed-dbrecp))
     ;; Exercises, nach alles
-    (if (search-forward str-dbexer nil t)
-        (end-of-buffer)
-      (org-calories-db--maketable str-dbexer "Exercises" hed-dbexer))))
+    (if (search-forward org-calories-db--str-dbexer nil t)
+        (goto-char (point-max))
+      (org-calories-db--maketable org-calories-db--str-dbexer "Exercises" org-calories-db--hed-dbexer))))
 
 
 (defun org-calories-db--generate (&optional type)
   "Generate the database from the file, and limit to TYPE."
   (org-calories-db--makeheaders)
-  (with-current-buffer (find-file-noselect databasefile)
+  (with-current-buffer (find-file-noselect org-calories-db-file)
     ;; Parse Tables
     (goto-char 0)
     (let ((sstring nil)
           (s2plist nil)
           (dbsymbl nil))
-      (cond ((eq type 'foods) (setq sstring str-dbfood
+      (cond ((eq type 'foods) (setq sstring org-calories-db--str-dbfood
                                     s2plist #'org-calories-db--foods2plist
-                                    dbsymbl 'db-foods))
-            ((eq type 'recipes) (setq sstring str-dbrecp
+                                    dbsymbl 'org-calories-db--foods))
+            ((eq type 'recipes) (setq sstring org-calories-db--str-dbrecp
                                       s2plist #'org-calories-db--recipes2plist
-                                      dbsymbl 'db-recipes))
-            ((eq type 'exercises) (setq sstring str-dbexer
+                                      dbsymbl 'org-calories-db--recipes))
+            ((eq type 'exercises) (setq sstring org-calories-db--str-dbexer
                                         s2plist #'org-calories-db--exercises2plist
-                                        dbsymbl 'db-exercises))
+                                        dbsymbl 'org-calories-db--exercises))
             (t (user-error "Database type doesn't exist")))
       ;;
       (if (search-forward sstring nil t)
@@ -155,7 +168,7 @@
 ;;          (fdata (cddr tdata))
 ;;          (parser (cond ((eq type 'foods) #'org-calories-db--foods2plist)
 ;;                        ((eq type 'recipes) #'org-calories-db--recipes2plist)
-;;                        (t (user-error "Doesn't exist."))))
+;;                        (t (user-error "Doesn't exist.? "))))
 ;;          (res-alist nil))
 ;;     (dolist (ldata fdata res-alist)
 ;;       (let ((fname (car ldata))
@@ -164,6 +177,7 @@
 
 
 (defun org-calories-db--kill-table ()
+  "Delete the current table."
   (forward-line 2) ;; to data line
   ;; erase current table
   (let ((start (line-beginning-position))
@@ -185,18 +199,18 @@
 (defun org-calories-db--sync (type)
   "Sync db TYPE back to database file."
   (org-calories-db--makeheaders)
-  (with-current-buffer (find-file-noselect databasefile)
+  (with-current-buffer (find-file-noselect org-calories-db-file)
     ;; Parse Tables
     (save-excursion
       (goto-char 0)
       (cond ((eq type 'foods)
-             (if (search-forward str-dbfood nil t)
+             (if (search-forward org-calories-db--str-dbfood nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
-                   (unless db-foods
-                     (user-error "db-foods not populated, quitting"))
+                   (unless org-calories-db--foods
+                     (user-error "Food database not populated, quitting"))
                    (org-calories-db--kill-table)
                    ;; Dump current food database
-                   (dolist (entry db-foods)
+                   (dolist (entry org-calories-db--foods)
                      (insert (car entry)) ;; food name
                      (org-table-next-field)
                      (dolist (keyw '(:portion :kc  :carbs :fibre :sugars
@@ -205,13 +219,13 @@
                        (org-table-next-field)))
                    (org-calories-db--trimandsort))))
             ((eq type 'recipes)
-             (if (search-forward str-dbrecp nil t)
+             (if (search-forward org-calories-db--str-dbrecp nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
-                   (unless db-recipes
-                     (user-error "db-recipes not populated, quitting"))
+                   (unless org-calories-db--recipes
+                     (user-error "Recipe database not populated, quitting"))
                    (org-calories-db--kill-table)
                    ;; Dump current recipes database
-                   (dolist (entry db-recipes)
+                   (dolist (entry org-calories-db--recipes)
                      (insert (car entry)) ;; recipe name
                      (org-table-next-field)
                      (insert (format ;; amount
@@ -226,13 +240,13 @@
                        (org-table-next-field)))
                    (org-calories-db--trimandsort))))
             ((eq type 'exercises)
-             (if (search-forward str-dbexer nil t)
+             (if (search-forward org-calories-db--str-dbexer nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
-                   (unless db-exercises
-                     (user-error "db-exercises not populated, quitting"))
+                   (unless org-calories-db--exercises
+                     (user-error "Exercise database not populated, quitting"))
                    (org-calories-db--kill-table)
                    ;; Dump current exercise database
-                   (dolist (entry db-exercises)
+                   (dolist (entry org-calories-db--exercises)
                      (insert (car entry)) ;; exercise name
                      (org-table-next-field)
                      (let ((dur (plist-get (cdr entry) :amount))
@@ -247,6 +261,7 @@
                    (org-calories-db--trimandsort))))
             (t (user-error "Doesn't exist")))
       (save-buffer)
-      (message "synced %s to %s" type databasefile))))
+      (message "synced %s to %s" type org-calories-db-file))))
 
 (provide 'org-calories-db)
+;;; org-calories-db.el ends here

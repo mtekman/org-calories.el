@@ -2,6 +2,12 @@
 
 ;; Copyright (C) 2020 Mehmet Tekman <mtekman89@gmail.com>
 
+;; Author: Mehmet Tekman
+;; URL: https://github.com/mtekman/org-calories.el
+;; Keywords: outlines
+;; Package-Requires: ((emacs "26.1") (dash "2.17.0") (org "9.1.6"))
+;; Version: 0.1
+
 ;;; License:
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -19,17 +25,23 @@
 ;; See org-calories.el
 
 ;;; Code:
+(require 'org)
 (require 'org-table)
 (require 'org-calories-db)
+(require 'org-calories-entry)
 
-(defcustom org-calories-log-file "~/logbook.org")
+(defcustom org-calories-log-file "~/logbook.org"
+  "Location of daily logging file."
+  :group 'org-calories
+  :type 'string)
+
 
 ;; Strings
-(defconst str-ltitled "#+TITLE: Daily Logs")
-(defconst str-targets "*** Targets / Macros")
-(defconst hed-targets "| Dailies | Min | Max |")
-(defconst str-daylogs "*** Logs")
-(defconst hed-daylogs "| Timestamp | Type | Item | Amount | Calories(kC) |")
+(defconst org-calories-log-str-ltitled "#+TITLE: Daily Logs")
+(defconst org-calories-log-str-targets "*** Targets / Macros")
+(defconst org-calories-log-hed-targets "| Dailies | Min | Max |")
+(defconst org-calories-log-str-daylogs "*** Logs")
+(defconst org-calories-log-hed-daylogs "| Timestamp | Type | Item | Amount | Calories(kC) |")
 
 (defun org-calories-log--makeheaders ()
   "Make table headers."
@@ -41,8 +53,8 @@
       (save-excursion
         (goto-char 0)
         ;; Make Title if not found
-        (unless (search-forward str-ltitled nil t)
-          (insert str-ltitled)
+        (unless (search-forward org-calories-log-str-ltitled nil t)
+          (insert org-calories-log-str-ltitled)
           (insert "\n\n"))
         ;; Search for Year
         (if (search-forward hed-year nil t)
@@ -55,7 +67,7 @@
         ;; Search for headers
         ;; Search for macros table
         (unless (search-forward tbl-macros nil t)
-          (org-calories-db--maketable str-targets tbl-macros hed-targets)
+          (org-calories-db--maketable org-calories-log-str-targets tbl-macros org-calories-log-hed-targets)
           (forward-line -2)
           (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
           (dolist (var '(kC Carbs Fibre Sugars Protein Fat Exercise Water))
@@ -64,15 +76,15 @@
           (org-table-align))
         ;; Search for logs table
         (unless (search-forward tbl-logs nil t)
-          (org-calories-db--maketable str-daylogs tbl-logs hed-daylogs))))))
+          (org-calories-db--maketable org-calories-log-str-daylogs tbl-logs org-calories-log-hed-daylogs))))))
 
 (defun org-calories-log--completions (type)
   "Produce completion keys for TYPE."
   (org-calories-db--generate type)
   (--map (car it)
-         (cond ((eq type 'foods) db-foods)
-               ((eq type 'recipes) db-recipes)
-               ((eq type 'exercises) db-exercises)
+         (cond ((eq type 'foods) org-calories-db--foods)
+               ((eq type 'recipes) org-calories-db--recipes)
+               ((eq type 'exercises) org-calories-db--exercises)
                (t (user-error "Not an option")))))
 
 (defun org-calories-log--goto-tableend ()
@@ -106,7 +118,7 @@
          (funcretr (intern (format "db-%s-retrieve" type)))
          (funcinst (intern (format "db-%s-insert" type)))
          (type-entry (funcall funcretr name))
-         (tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
+         ;;(tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
          (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
     (unless type-entry
       (if (y-or-n-p (format "%s '%s' does not exist, insert new %s? "
@@ -127,11 +139,11 @@
                           (org-calories-log--completions 'foods))))
   (org-calories-log--prelog 'foods food)
   ;; At first empty
-  (let* ((food-info (db-foods-retrieve food))
+  (let* ((food-info (org-calories-entry--foods-retrieve food))
          (amount-want (or portion (read-number (message (format
-                                  "[%s] -- %s\nWhat portion of food (g)? "
-                                  food food-info)))))
-         (scaled-food (db-scale-item 'foods food-info amount-want))
+                                                         "[%s] -- %s\nWhat portion of food (g)? "
+                                                         food food-info)))))
+         (scaled-food (org-calories-db--scale-item 'foods food-info amount-want))
          (scaled-calories (plist-get scaled-food :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect org-calories-log-file)
@@ -145,14 +157,14 @@
   (interactive
    (list (completing-read "Recipe: " (org-calories-log--completions 'recipes))))
   (org-calories-log--prelog 'recipes recipe)
-  (let* ((recipe-info (db-recipes-retrieve recipe))
+  (let* ((recipe-info (org-calories-entry--recipes-retrieve recipe))
          (amount-want (or portion (read-number (message (format
-                                  "[%s] -- %s\nWhat amount of recipe? "
-                                  recipe recipe-info)))))
+                                                         "[%s] -- %s\nWhat amount of recipe? "
+                                                         recipe recipe-info)))))
          ;; the above has portion value of -1, but is the total
          ;; food value of the native portion of that recipe
-         (calced-recipe (db-recipes-calculate recipe-info))
-         (scaled-recipe (db-scale-item 'recipes calced-recipe amount-want))
+         (calced-recipe (org-calories-entry--recipes-calculate recipe-info))
+         (scaled-recipe (org-calories-db--scale-item 'recipes calced-recipe amount-want))
          (scaled-calories (plist-get scaled-recipe :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect org-calories-log-file)
@@ -167,12 +179,12 @@ The unit does not actually matter because it's set by the database and we are ju
   (interactive
    (list (completing-read "Exercise: " (org-calories-log--completions 'exercises))))
   (org-calories-log--prelog 'exercises exercise)
-  (let* ((exercise-info (db-exercises-retrieve exercise))
+  (let* ((exercise-info (org-calories-entry--exercises-retrieve exercise))
          (amount-want (or amount
                           (read-number (message (format
-                           "[%s] -- %s\nWhat amount of exercise? "
-                           exercise exercise-info)))))
-         (scaled-exercise (db-scale-item 'exercises exercise-info amount-want))
+                                                 "[%s] -- %s\nWhat amount of exercise? "
+                                                 exercise exercise-info)))))
+         (scaled-exercise (org-calories-db--scale-item 'exercises exercise-info amount-want))
          (scaled-calories (plist-get scaled-exercise :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect org-calories-log-file)

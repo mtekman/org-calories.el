@@ -56,7 +56,7 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
   (let* ((result (read-string
                   (concat "[" fname "] -- kCals and Grams:\n\
 kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
-         (plistinp (db-foods-2plist (split-string result))))
+         (plistinp (org-calories-db--foods2plist (split-string result))))
     (org-calories-entry--foods-validateentry plistinp)))
 
 (defun org-calories-entry--foods-insert (fname &optional plist-info)
@@ -81,7 +81,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
           (read-string
            (concat "[" rname "] -- amount, then pairs of\
  food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
-    (db-recipes-2plist (split-string result))))
+    (org-calories-db--recipes2plist (split-string result))))
 
 (defun org-calories-entry-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
@@ -122,7 +122,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
       (let* ((foodname (plist-get var :food))
              (fportion (plist-get var :portion))
              (foodinfo (org-calories-entry--foods-retrieve foodname))
-             (foodscal (db-scale-item 'foods foodinfo fportion)))
+             (foodscal (org-calories-db--scale-item 'foods foodinfo fportion)))
         (setq food-total (org-calories-entry--foods-add food-total foodscal))))
     ;; here we add a new field to make it recipe compliant
     (setq food-total (plist-put food-total :amount amount-native))
@@ -133,7 +133,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   "Create a new plist exercise entry named ENAME."
   (let* ((result
           (read-string (concat "[" ename "] -- Duration(Mins) and Calories(kC): "))))
-    (db-exercises-2plist (split-string result))))
+    (org-calories-db--exercises2plist (split-string result))))
 
 (defun org-calories-entry-exercises-insert (ename &optional plist-info)
   "Define exercise ENAME with PLIST-INFO of description, duration, and calories."
@@ -160,5 +160,5 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
 ;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :portion 30) (:food "fruit2" :portion 120) (:food "fruit3" :portion 50)))
 ;; (org-calories-entry--recipes-retrieve "fruit salad")
 
-(provide 'org-calories-item)
-;;; org-calories-foods.el ends here
+(provide 'org-calories-entry)
+;;; org-calories-entry.el ends here
