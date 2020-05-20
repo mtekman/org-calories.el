@@ -3,7 +3,7 @@
 
 (defun macros-get (&optional year month)
   "Get daily target macros for YEAR and MONTH."
-  (logbook-makeheaders)
+  (org-calories-db-logbook-makeheaders)
   (let* ((marcs nil)
          (myear (or year (string-to-number
                           (format-time-string "%Y"))))
@@ -28,7 +28,7 @@
 
 (defun totals-get (&optional year month day)
   "Get daily total macros for YEAR and MONTH, up to current DAY."
-  (logbook-makeheaders)
+  (org-calories-db-logbook-makeheaders)
   (let* ((myear (or year (string-to-number
                           (format-time-string "%Y"))))
          (mmont (or month (string-to-number

@@ -1,7 +1,27 @@
-(require 'org-calories-database)
+;;; org-calories-entry.el --- Different database entry types for org-calories -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2020 Mehmet Tekman <mtekman89@gmail.com>
+
+;;; License:
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;;; Commentary:
+
+;; See org-calories.el
 
 ;;; Code:
-(defun db-foods-validateentry (pentry)
+(require 'org-calories-db)
+
+(defun org-calories-entry--foods-validateentry (pentry)
   "Checking the contents of PENTRY."
   (let ((judgement "Keeping inconsistency, but secretly judging you for it.")
         (kc (plist-get pentry :kc)) (portion (plist-get pentry :portion))
@@ -30,32 +50,32 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
           :carbs ,carbs :fibre ,fibre :sugars ,sugars
           :protein ,protein :fat ,fat :sodium ,sodium)))
 
-(defun db-foods-newentry (fname)
+(defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."
   ;;(if (y-or-n-p "Search online? ") (online-retrieve fname)
   (let* ((result (read-string
                   (concat "[" fname "] -- kCals and Grams:\n\
 kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
          (plistinp (db-foods-2plist (split-string result))))
-    (db-foods-validateentry plistinp)))
+    (org-calories-entry--foods-validateentry plistinp)))
 
-(defun db-foods-insert (fname &optional plist-info)
+(defun org-calories-entry--foods-insert (fname &optional plist-info)
   "Insert food FNAME with PLIST-INFO."
   (interactive "sFood Name: ")
-  (if (db-foods-retrieve fname)
+  (if (org-calories-entry--foods-retrieve fname)
       (message "Food '%s' already exists in the food table, not inserting." fname)
     (cl-pushnew
-     (cons fname (or plist-info (db-foods-newentry fname)))
+     (cons fname (or plist-info (org-calories-entry--foods-newentry fname)))
      db-foods :key #'car)
-    (database-sync 'foods)))
+    (org-calories-db--sync 'foods)))
 
-(defun db-foods-retrieve (fname)
+(defun org-calories-entry--foods-retrieve (fname)
   "Retrieve food plist on FNAME from db."
-  (database-generate 'foods)
+  (org-calories-db--generate 'foods)
   (alist-get fname db-foods nil nil #'string-equal))
 ;;
 ;;
-(defun db-recipes-newentry (rname)
+(defun org-calories-entry--recipes-newentry (rname)
   "Create a new plist recipe entry named RNAME."
   (let* ((result
           (read-string
@@ -63,22 +83,22 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
  food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
     (db-recipes-2plist (split-string result))))
 
-(defun db-recipes-insert (rname &optional plist-info)
+(defun org-calories-entry-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
   (interactive "sRecipe Name: ")
-  (if (db-recipes-retrieve rname)
+  (if (org-calories-entry--recipes-retrieve rname)
       (message "Recipe '%s' already exists in the recipes table, not inserting." rname)
     (cl-pushnew
-     (cons rname (or plist-info (db-recipes-newentry rname)))
+     (cons rname (or plist-info (org-calories-entry--recipes-newentry rname)))
      db-recipes :key #'car)
-    (database-sync 'recipes)))
+    (org-calories-db--sync 'recipes)))
 
-(defun db-recipes-retrieve (rname)
+(defun org-calories-entry--recipes-retrieve (rname)
   "Retrieve recipe plist on RNAME from db.  No need to sync."
-  (database-generate 'recipes)
+  (org-calories-db--generate 'recipes)
   (alist-get rname db-recipes nil nil #'string-equal))
 
-(defun db-foods-add (finfo1 finfo2)
+(defun org-calories-entry--foods-add (finfo1 finfo2)
   "Add food info FINFO1 and FINFO2.  Foods should be scaled first."
   (let ((adder (lambda (f1 f2 kw)(+ (plist-get f1 kw)
                                (plist-get f2 kw)))))
@@ -94,50 +114,51 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
       ;; return one or the other
       (or finfo1 finfo2))))
 ;;
-(defun db-recipes-calculate (recipe-info)
+(defun org-calories-entry--recipes-calculate (recipe-info)
   "Calculate the food content of the ingredients given by RECIPE-INFO."
   (let ((amount-native (plist-get recipe-info :amount))
         (food-total nil))
     (dolist (var (plist-get recipe-info :ingredients))
       (let* ((foodname (plist-get var :food))
              (fportion (plist-get var :portion))
-             (foodinfo (db-foods-retrieve foodname))
+             (foodinfo (org-calories-entry--foods-retrieve foodname))
              (foodscal (db-scale-item 'foods foodinfo fportion)))
-        (setq food-total (db-foods-add food-total foodscal))))
+        (setq food-total (org-calories-entry--foods-add food-total foodscal))))
     ;; here we add a new field to make it recipe compliant
     (setq food-total (plist-put food-total :amount amount-native))
     food-total))
 ;;
 ;;
-(defun db-exercises-newentry (ename)
+(defun org-calories-entry--exercises-newentry (ename)
   "Create a new plist exercise entry named ENAME."
   (let* ((result
           (read-string (concat "[" ename "] -- Duration(Mins) and Calories(kC): "))))
     (db-exercises-2plist (split-string result))))
 
-(defun db-exercises-insert (ename &optional plist-info)
+(defun org-calories-entry-exercises-insert (ename &optional plist-info)
   "Define exercise ENAME with PLIST-INFO of description, duration, and calories."
   (interactive "sExercise Name: ")
-  (if (db-exercises-retrieve ename)
+  (if (org-calories-entry--exercises-retrieve ename)
       (message "Exercise '%s' already exists in the exercises table, not inserting." ename)
     (cl-pushnew
-     (cons ename (or plist-info (db-exercises-newentry ename)))
+     (cons ename (or plist-info (org-calories-entry--exercises-newentry ename)))
      db-exercises :key #'car)
-    (database-sync 'exercises)))
+    (org-calories-db--sync 'exercises)))
 
-(defun db-exercises-retrieve (rname)
+(defun org-calories-entry--exercises-retrieve (rname)
   "Retrieve exercise RNAME from db."
-  (database-generate 'exercises)
+  (org-calories-db--generate 'exercises)
   (alist-get rname db-exercises nil nil #'string-equal))
 
 
 ;;;; -{Tests}-
-;; (db-foods-insert "fruit1" '(:kc 110 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (db-foods-insert "fruit2" '(:kc 120 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (db-foods-insert "fruit3" '(:kc 130 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (db-foods-retrieve "fruit2")
-;; (db-foods-insert "chew")
-;; (db-recipes-insert "fruit salad" '((:food "fruit1" :portion 30) (:food "fruit2" :portion 120) (:food "fruit3" :portion 50)))
-;; (db-recipes-retrieve "fruit salad")
-(provide 'org-calories-food)
+;; (org-calories-entry--foods-insert "fruit1" '(:kc 110 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry--foods-insert "fruit2" '(:kc 120 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry--foods-insert "fruit3" '(:kc 130 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry--foods-retrieve "fruit2")
+;; (org-calories-entry--foods-insert "chew")
+;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :portion 30) (:food "fruit2" :portion 120) (:food "fruit3" :portion 50)))
+;; (org-calories-entry--recipes-retrieve "fruit salad")
+
+(provide 'org-calories-item)
 ;;; org-calories-foods.el ends here
