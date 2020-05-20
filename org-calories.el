@@ -5,7 +5,7 @@
 ;; Author: Mehmet Tekman
 ;; URL: https://github.com/mtekman/org-calories.el
 ;; Keywords: outlines
-;; Package-Requires: ((emacs "26.1") (dash "2.17.0") (org-table "9.1.6"))
+;; Package-Requires: ((emacs "26.1") (dash "2.17.0") (org "9.1.6"))
 ;; Version: 0.1
 
 ;;; License:
@@ -26,10 +26,10 @@
 
 ;;; Code:
 (require 'org-calories-db)
-(require 'org-treeusage-cycle)
-(require 'org-treeusage-overlay)
-(require 'org-treeusage-parse)
-
+(require 'org-calories-entry)
+(require 'org-calories-log)
+(require 'org-calories-macros)
+;;(require 'org-calories-online)
 
 (provide 'org-calories)
 ;;; org-calories.el ends here

@@ -2,6 +2,12 @@
 
 ;; Copyright (C) 2020 Mehmet Tekman <mtekman89@gmail.com>
 
+;; Author: Mehmet Tekman
+;; URL: https://github.com/mtekman/org-calories.el
+;; Keywords: outlines
+;; Package-Requires: ((emacs "26.1") (dash "2.17.0") (org "9.1.6"))
+;; Version: 0.1
+
 ;;; License:
 
 ;; This program is free software; you can redistribute it and/or modify
@@ -31,8 +37,8 @@
       (unless (<= visiblecarbs carbs)
         (if (y-or-n-p
              (format
-              "Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg?\n\
-(Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)"
+              "(Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)\n\
+Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg? "
               fibre sugars carbs visiblecarbs))
             (setq carbs visiblecarbs)
           (message judgement))))
@@ -47,8 +53,8 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
             (setq kc newkc)
           (message judgement))))
     `(:portion ,portion :kc ,kc
-          :carbs ,carbs :fibre ,fibre :sugars ,sugars
-          :protein ,protein :fat ,fat :sodium ,sodium)))
+               :carbs ,carbs :fibre ,fibre :sugars ,sugars
+               :protein ,protein :fat ,fat :sodium ,sodium)))
 
 (defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."
@@ -66,20 +72,19 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
       (message "Food '%s' already exists in the food table, not inserting." fname)
     (cl-pushnew
      (cons fname (or plist-info (org-calories-entry--foods-newentry fname)))
-     db-foods :key #'car)
+     org-calories-db--foods :key #'car)
     (org-calories-db--sync 'foods)))
 
 (defun org-calories-entry--foods-retrieve (fname)
   "Retrieve food plist on FNAME from db."
   (org-calories-db--generate 'foods)
-  (alist-get fname db-foods nil nil #'string-equal))
-;;
+  (alist-get fname org-calories-db--foods nil nil #'string-equal))
 ;;
 (defun org-calories-entry--recipes-newentry (rname)
   "Create a new plist recipe entry named RNAME."
-  (let* ((result
-          (read-string
-           (concat "[" rname "] -- amount, then pairs of\
+  (let ((result
+         (read-string
+          (concat "[" rname "] -- amount, then pairs of\
  food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
     (org-calories-db--recipes2plist (split-string result))))
 
@@ -90,18 +95,17 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
       (message "Recipe '%s' already exists in the recipes table, not inserting." rname)
     (cl-pushnew
      (cons rname (or plist-info (org-calories-entry--recipes-newentry rname)))
-     db-recipes :key #'car)
+     org-calories-db--recipes :key #'car)
     (org-calories-db--sync 'recipes)))
 
 (defun org-calories-entry--recipes-retrieve (rname)
   "Retrieve recipe plist on RNAME from db.  No need to sync."
   (org-calories-db--generate 'recipes)
-  (alist-get rname db-recipes nil nil #'string-equal))
+  (alist-get rname org-calories-db--recipes nil nil #'string-equal))
 
 (defun org-calories-entry--foods-add (finfo1 finfo2)
   "Add food info FINFO1 and FINFO2.  Foods should be scaled first."
-  (let ((adder (lambda (f1 f2 kw)(+ (plist-get f1 kw)
-                               (plist-get f2 kw)))))
+  (let ((adder (lambda (f1 f2 kw)(+ (plist-get f1 kw) (plist-get f2 kw)))))
     (if (and finfo1 finfo2)
         (list :portion (funcall adder finfo1 finfo2 :portion)
               :kc (funcall adder finfo1 finfo2 :kc)
@@ -142,13 +146,13 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
       (message "Exercise '%s' already exists in the exercises table, not inserting." ename)
     (cl-pushnew
      (cons ename (or plist-info (org-calories-entry--exercises-newentry ename)))
-     db-exercises :key #'car)
+     org-calories-db--exercises :key #'car)
     (org-calories-db--sync 'exercises)))
 
 (defun org-calories-entry--exercises-retrieve (rname)
   "Retrieve exercise RNAME from db."
   (org-calories-db--generate 'exercises)
-  (alist-get rname db-exercises nil nil #'string-equal))
+  (alist-get rname org-calories-db--exercises nil nil #'string-equal))
 
 
 ;;;; -{Tests}-
