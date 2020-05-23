@@ -52,11 +52,7 @@
 
 (defun org-calories-db--scale-item (type plist-info amount)
   "For item TYPE, scale PLIST-INFO data by AMOUNT."
-  (let* ((scalefield (cond ((eq type 'foods) :portion)
-                           ((eq type 'recipes) :amount)
-                           ((eq type 'exercises) :amount)
-                           (t (user-error "Scale type not found"))))
-         (scaleamount (plist-get plist-info scalefield))
+  (let* ((scaleamount (plist-get plist-info :amount))
          (scalefractn (/ (float scaleamount) amount))
          (newplist nil))
     (dolist (var (reverse plist-info) newplist)
