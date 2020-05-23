@@ -40,11 +40,11 @@
 
 (defconst org-calories-db--str-titled "#+TITLE: Database of Foods, Recipes, and Exercises")
 (defconst org-calories-db--str-dbfood "* Individual Foods")
-(defconst org-calories-db--hed-dbfood "| Name | Portion(g) | Calories (kC) | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
+(defconst org-calories-db--hed-dbfood "| Name | Amount | Unit | kCal | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
 (defconst org-calories-db--str-dbrecp "* Recipes")
-(defconst org-calories-db--hed-dbrecp "| Name | Amount | Ingredients (Foods::Portion(g)[,,] |") ;; variable length nested list
+(defconst org-calories-db--hed-dbrecp "| Name | Amount | Ingredients (Food::Amount[,,] |") ;; variable length nested list
 (defconst org-calories-db--str-dbexer "* Exercises")
-(defconst org-calories-db--hed-dbexer "| Name | Amount | Unit | Calories (kC) |")
+(defconst org-calories-db--hed-dbexer "| Name | Amount | Unit | kCal |")
 
 (defsubst org-calories-db--s2n (num pin)
   "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
@@ -67,10 +67,11 @@
 
 (defun org-calories-db--foods2plist (pin)
   "Convert a single entry list of PIN to food plist."
-  `(:portion ,(org-calories-db--s2n 0 pin) :kc ,(org-calories-db--s2n 1 pin)
-             :carbs ,(org-calories-db--s2n 2 pin) :fibre ,(org-calories-db--s2n 3 pin)
-             :sugars ,(org-calories-db--s2n 4 pin) :protein ,(org-calories-db--s2n 5 pin)
-             :fat ,(org-calories-db--s2n 6 pin) :sodium ,(org-calories-db--s2n 7 pin)))
+  (list :amount (org-calories-db--s2n 0 pin) :unit (nth 1 pin)
+        :kc (org-calories-db--s2n 2 pin) :carbs (org-calories-db--s2n 3 pin)
+        :fibre (org-calories-db--s2n 4 pin) :sugars (org-calories-db--s2n 5 pin)
+        :protein (org-calories-db--s2n 6 pin) :fat (org-calories-db--s2n 7 pin)
+        :sodium (org-calories-db--s2n 8 pin)))
 
 (defun org-calories-db--recipes2plist (pin)
   "Convert a single entry list of PIN to recipes plist."
@@ -80,7 +81,7 @@
       (let* ((portfood (split-string ingredients "::"))
              (food (nth 0 portfood))
              (port (string-to-number (nth 1 portfood))))
-        (push (list :food food :portion port) recipeingrd)))
+        (push (list :food food :amount port) recipeingrd)))
     (list :amount recipeamt :ingredients recipeingrd)))
 
 
@@ -213,9 +214,10 @@
                    (dolist (entry org-calories-db--foods)
                      (insert (car entry)) ;; food name
                      (org-table-next-field)
-                     (dolist (keyw '(:portion :kc  :carbs :fibre :sugars
-                                              :protein :fat :sodium))
-                       (insert (format "%s" (plist-get (cdr entry) keyw)))
+                     (dolist (keyw '(:amount :unit :kc  :carbs :fibre :sugars
+                                             :protein :fat :sodium))
+                       (let ((am (plist-get (cdr entry) keyw)))
+                         (insert (format (if (floatp am) "%.1f" "%s") am)))
                        (org-table-next-field)))
                    (org-calories-db--trimandsort))))
             ((eq type 'recipes)
@@ -234,7 +236,7 @@
                      (let ((inglist nil))
                        (dolist (ingr (plist-get (cdr entry) :ingredients))
                          (let ((food (plist-get ingr :food))
-                               (port (plist-get ingr :portion)))
+                               (port (plist-get ingr :amount)))
                            (push (format "%s::%d" food port) inglist)))
                        (insert (format "%s" (string-join inglist ",,")))
                        (org-table-next-field)))

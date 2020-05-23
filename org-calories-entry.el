@@ -30,7 +30,7 @@
 (defun org-calories-entry--foods-validateentry (pentry)
   "Checking the contents of PENTRY."
   (let ((judgement "Keeping inconsistency, but secretly judging you for it.")
-        (kc (plist-get pentry :kc)) (portion (plist-get pentry :portion))
+        (kc (plist-get pentry :kc)) (amount (plist-get pentry :amount)) (unit (plist-get pentry :unit))
         (carbs (plist-get pentry :carbs)) (fibre (plist-get pentry :fibre)) (sugars (plist-get pentry :sugars))
         (protein (plist-get pentry :protein)) (fat (plist-get pentry :fat)) (sodium (plist-get pentry :sodium)))
     (let ((visiblecarbs (+ fibre sugars)))
@@ -39,29 +39,32 @@
              (format
               "(Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)\n\
 Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg? "
-              fibre sugars carbs visiblecarbs))
+              fibre sugars carbs
+              (format (if (floatp visiblecarbs) "%.1f" "%d") visiblecarbs)))
             (setq carbs visiblecarbs)
           (message judgement))))
-    (let ((newkc (+ (* 4 (- carbs fibre)) (* 4 protein) (* 7 fat))))
+    (let ((newkc (+ (* 4 (- carbs fibre)) (* 4 protein) (* 9 fat))))
       (unless (= newkc kc)
         (if (y-or-n-p
              (format
               "[Calculation Error]\n\
-  (4*((carbs - fibre) + protein)) + (7*fat) = (4*((%s - %s) + %s)) + (7*%s) = %s kCal\n\
+ (4*((carbs - fibre) + protein)) + (9*fat) =\n\
+ (4*((%s - %s) + %s)) + (7*%s) = %s kCal\n\
 This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s kCal instead? "
-              carbs fibre protein fat newkc kc newkc))
+              (format (if (floatp carbs) "%.1f" "%d") carbs)
+              fibre protein fat newkc kc newkc))
             (setq kc newkc)
           (message judgement))))
-    `(:portion ,portion :kc ,kc
-               :carbs ,carbs :fibre ,fibre :sugars ,sugars
-               :protein ,protein :fat ,fat :sodium ,sodium)))
+    `(:amount ,amount :unit ,unit :kc ,kc
+              :carbs ,carbs :fibre ,fibre :sugars ,sugars
+              :protein ,protein :fat ,fat :sodium ,sodium)))
 
 (defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."
   ;;(if (y-or-n-p "Search online? ") (online-retrieve fname)
   (let* ((result (read-string
                   (concat "[" fname "] -- kCals and Grams:\n\
-kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
+Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
          (plistinp (org-calories-db--foods2plist (split-string result))))
     (org-calories-entry--foods-validateentry plistinp)))
 
@@ -85,7 +88,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   (let ((result
          (read-string
           (concat "[" rname "] -- amount, then pairs of\
- food::portion(g)[,,food::portion(g)] ingredient items:\n"))))
+ food::amount[,,food::amount] ingredient items:\n"))))
     (org-calories-db--recipes2plist (split-string result))))
 
 (defun org-calories-entry-recipes-insert (rname &optional plist-info)
@@ -107,8 +110,7 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   "Add food info FINFO1 and FINFO2.  Foods should be scaled first."
   (let ((adder (lambda (f1 f2 kw)(+ (plist-get f1 kw) (plist-get f2 kw)))))
     (if (and finfo1 finfo2)
-        (list :portion (funcall adder finfo1 finfo2 :portion)
-              :kc (funcall adder finfo1 finfo2 :kc)
+        (list :kc (funcall adder finfo1 finfo2 :kc)
               :carbs (funcall adder finfo1 finfo2 :carbs)
               :fibre (funcall adder finfo1 finfo2 :fibre)
               :sugars (funcall adder finfo1 finfo2 :sugars)
@@ -124,15 +126,14 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
         (food-total nil))
     (dolist (var (plist-get recipe-info :ingredients))
       (let* ((foodname (plist-get var :food))
-             (fportion (plist-get var :portion))
+             (fportion (plist-get var :amount))
              (foodinfo (org-calories-entry--foods-retrieve foodname))
              (foodscal (org-calories-db--scale-item 'foods foodinfo fportion)))
         (setq food-total (org-calories-entry--foods-add food-total foodscal))))
     ;; here we add a new field to make it recipe compliant
     (setq food-total (plist-put food-total :amount amount-native))
     food-total))
-;;
-;;
+
 (defun org-calories-entry--exercises-newentry (ename)
   "Create a new plist exercise entry named ENAME."
   (let* ((result
@@ -156,12 +157,12 @@ kc\tportion\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
 
 
 ;;;; -{Tests}-
-;; (org-calories-entry--foods-insert "fruit1" '(:kc 110 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry--foods-insert "fruit2" '(:kc 120 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry--foods-insert "fruit3" '(:kc 130 :portion 100 :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry--foods-insert "fruit1" '(:kc 110 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry--foods-insert "fruit2" '(:kc 120 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry--foods-insert "fruit3" '(:kc 130 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
 ;; (org-calories-entry--foods-retrieve "fruit2")
 ;; (org-calories-entry--foods-insert "chew")
-;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :portion 30) (:food "fruit2" :portion 120) (:food "fruit3" :portion 50)))
+;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :amount 30) (:food "fruit2" :amount 120) (:food "fruit3" :amount 50)))
 ;; (org-calories-entry--recipes-retrieve "fruit salad")
 
 (provide 'org-calories-entry)

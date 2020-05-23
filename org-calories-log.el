@@ -109,7 +109,7 @@
   (org-table-next-field)
   (insert (format (if (floatp amount) "%.2f" "%d") amount))
   (org-table-next-field)
-  (insert (format "%d" calories)) ;; fractional calories would be pointless here
+  (insert (format (if (floatp calories) "%.2f" "%d") calories))
   (org-table-next-field))
 
 (defun org-calories-log--prelog (type name)
