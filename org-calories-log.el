@@ -116,7 +116,7 @@
   "Preamble for importing NAME of TYPE, and finding the right table."
   (let* ((captype (capitalize (format "%s" type)))
          (funcretr (intern (format "org-calories-entry--%s-retrieve" type)))
-         (funcinst (intern (format "org-calories-entry--%s-insert" type)))
+         (funcinst (intern (format "org-calories-entry-%s-insert" type)))
          (type-entry (funcall funcretr name))
          ;;(tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
          (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))

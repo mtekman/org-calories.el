@@ -85,11 +85,15 @@ Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
 ;;
 (defun org-calories-entry--recipes-newentry (rname)
   "Create a new plist recipe entry named RNAME."
-  (let ((result
-         (read-string
-          (concat "[" rname "] -- amount, then pairs of\
- food::amount[,,food::amount] ingredient items:\n"))))
-    (org-calories-db--recipes2plist (split-string result))))
+  (let* ((inpstr (split-string
+                  (read-string
+                   (concat "[" rname "] -- Recipe Amount, then pairs of \
+Food::Amount  [Food::Amount] ingredient items:\n\
+RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
+         (amount (car inpstr))
+         (rest (string-join (cdr inpstr) ",,")))
+    (org-calories-db--recipes2plist (list amount rest))))
+
 
 (defun org-calories-entry-recipes-insert (rname &optional plist-info)
   "Insert recipes RNAME with PLIST-INFO (an array of food and portions)."
