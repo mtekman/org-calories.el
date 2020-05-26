@@ -1,27 +1,86 @@
 
-(setq org-calories-online--base "https://fddb.info/xml/ac/1/en")
+;;; Code:
+(defvar org-calories-online--base "https://fddb.info/xml/ac/1/en")
 
-(defun org-calories-search (query)
+(defun org-calories-testoptions (qsearch)
+  "Search query QSEARCH."
+  (completing-read "Food options:\n"
+                   (--map (plist-get it :user-options)
+                          (org-calories-online--search qsearch))
+                   nil t))
+
+
+(defun org-calories-online--search (query)
+  "Search food QUERY."
   (let* ((reftitle nil)
-         (search-url (format "%s/%s"
-                             org-calories-online--base
-                             query))
-         (results-buffer (url-retrieve-synchronously
-                          search-url nil t 5)))
+         (search-url (format "%s/%s" org-calories-online--base query))
+         (results-buffer (url-retrieve-synchronously search-url nil t 5)))
+    ;; Populate list
     (with-current-buffer results-buffer
       (goto-char 0)
       (while (re-search-forward
+              ;; TODO: <b>bold</b> elements are also terminal nodes in match 2
               "window.location.href='\\([^']*\\)';\"><div id='acelement.'>\\([^<]*\\)<" nil t)
         (let ((href (buffer-substring-no-properties (match-beginning 1)
                                                     (match-end 1)))
               (titl (buffer-substring-no-properties (match-beginning 2)
                                                     (match-end 2))))
-          (push (list titl href (org-calories-getinfo href)) reftitle))))
-    reftitle))
+          (push (list titl href (org-calories-online--extractrelevant
+                                 (org-calories-online--getinfo href)))
+                reftitle)))
+      ;; Format list
+      (--map (list :food (car it)
+                   :food-info (nth 2 it)
+                   :user-options
+                   (format "%s -- [%s %s %s (%s %s) %s %s %s]"
+                           (car it)
+                           (format "%3d%s" (plist-get (nth 2 it) :amount)
+                                   (plist-get (nth 2 it) :unit))
+                           (format "%3dkCal" (plist-get (nth 2 it) :kc))
+                           (format "%3dg" (plist-get (nth 2 it) :carbs))
+                           (format "%3dg" (plist-get (nth 2 it) :sugars))
+                           (format "%3dg" (plist-get (nth 2 it) :fibre))
+                           (format "%3dg" (plist-get (nth 2 it) :protein))
+                           (format "%3dg" (plist-get (nth 2 it) :fat))
+                           (format "%3dmg" (plist-get (nth 2 it) :sodium))))
+                    reftitle))))
 
-(defun org-calories-getinfo (url)
+
+(defun org-calories-online--inlineextract (key pinfo)
+  "Extract number and unit from KEY extracted from PINFO."
+  (let ((val (alist-get key pinfo nil nil #'string=)))
+    (if val
+        (let* ((kvalunit (split-string val))
+               (kval (string-to-number (car kvalunit)))
+               (kunt (cadr kvalunit)))
+          (if (member kunt '("kcal" "g" "mg"))
+              (cons kval kunt)
+            (user-error "Could not parse %d %s" kval kunt)))
+      (cons 0 "g"))))
+
+
+
+(defun org-calories-online--extractrelevant (info)
+  "Extract relevant calorific info from INFO derived from --getinfo."
+  (let* ((calorie (org-calories-online--inlineextract "Calories" info))
+         (pamount (org-calories-online--inlineextract "Portion" info))
+         (totcarb (org-calories-online--inlineextract "Carbohydrates" info))
+         (cafibre (org-calories-online--inlineextract "Dietary fibre" info))
+         (casugar (org-calories-online--inlineextract "thereof Sugar" info))
+         (protein (org-calories-online--inlineextract "Protein" info))
+         (fatamnt (org-calories-online--inlineextract "Fat" info))
+         (sodiumv (org-calories-online--inlineextract "Sodium" info)))
+    (list :amount (car pamount) :unit (cdr pamount)
+          :kc (car calorie)
+          :carbs (car totcarb) :fibre (car cafibre) :sugars (car casugar)
+          :protein (car protein) :fat (car fatamnt)
+          :sodium (or (car sodiumv) 0))))
+
+
+(defun org-calories-online--getinfo (url)
   "Retrieve calorific information from URL."
   (let* ((tabdata nil)
+         (get-str #'buffer-substring-no-properties)
          (results-buffer (url-retrieve-synchronously url nil t 5)))
     (with-current-buffer results-buffer
       (goto-char 0)
@@ -29,17 +88,14 @@
         ;; Header
         (if (re-search-forward "<h2[^>]*>Data for\\([^<]*\\)</h2>" nil t)
             (push (cons "Portion"
-                        (buffer-substring-no-properties (match-beginning 1)
-                                                        (match-end 1)))
+                        (funcall get-str (match-beginning 1) (match-end 1)))
                   tabdata))
         ;; Data
         (while (re-search-forward
                 ">\\([^<]*\\)</\\(a\\|span\\)></div><div>\\([^<]*\\)</div>"
                 nil t)
-          (let ((item (buffer-substring-no-properties (match-beginning 1)
-                                                      (match-end 1)))
-                (valu (buffer-substring-no-properties (match-beginning 3)
-                                                      (match-end 3))))
+          (let ((item (funcall get-str (match-beginning 1) (match-end 1)))
+                (valu (funcall get-str (match-beginning 3) (match-end 3))))
             (push (cons item valu) tabdata))))
       tabdata)))
 
@@ -70,34 +126,31 @@
 ;;         (read-answer (concat fname ": ") resoffer)
 ;;       (message "No results found."))))
 
-(defun dino-xml-pretty-print-region (begin end)
-  "Pretty format XML markup in region. You need to have nxml-mode
-    http://www.emacswiki.org/cgi-bin/wiki/NxmlMode installed to do
-    this. The function inserts linebreaks to separate tags that have
-    nothing but whitespace between them. It then indents the markup
-    by using nxml's indentation rules."
-  (interactive "r")
-  (save-excursion
-    (nxml-mode)
-    ;; split <foo><bar> or </foo><bar>, but not <foo></foo>
-    (goto-char begin)
-    (while (search-forward-regexp ">[ \t]*<[^/]" end t)
-      (backward-char 2) (insert "\n") (incf end))
-    ;; split <foo/></foo> and </foo></foo>
-    (goto-char begin)
-    (while (search-forward-regexp "<.*?/.*?>[ \t]*<" end t)
-      (backward-char) (insert "\n") (incf end))
-    ;; put xml namespace decls on newline
-    (goto-char begin)
-    (while (search-forward-regexp "\\(<\\([a-zA-Z][-:A-Za-z0-9]*\\)\\|['\"]\\) \\(xmlns[=:]\\)" end t)
-      (goto-char (match-end 0))
-      (backward-char 6) (insert "\n") (incf end))
-    (indent-region begin end nil)
-    (normal-mode))
-  (message "All indented!"))
+(Calories . 220 kcal)
+(Portion .   100 g)
+(Carbohydrates . 37 g)
+(Dietary fibre . 5.9 g)
+(thereof Sugar . 1.2 g)
+(Protein . 8.5 g)
+(Fat . 4.4 g)
 
+(Iodine . 1 mg)
+(Fluorine . 0.01 mg)
+(Copper . 0.2 mg)
+(Phosphorus . 138 mg)
+(Calcium . 23 mg)
+(Potassium . 171 mg)
+(Sulphur . 41 mg)
+(Manganese . 1.3 mg)
+(Chlorine . 670 mg)
+(Magnesium . 46 mg)
+(Zinc . 1.5 mg)
+(Iron . 1.6 mg)
+(Salt . 1.1481 g)
+(Vitamin B6 . 0.08 mg)
+(Riboflavin . 0.05 mg)
+(Thiamine . 0.18 mg)
+(Vitamin E . 0.7 mg)
+(Water content . 43%)
 
-(defun dino-xml-pretty-print-buffer ()
-  "pretty print the XML in a buffer."
-  (interactive)
-  (dino-xml-pretty-print-region (point-min) (point-max)))
+(Calorific value . 921 kJ)
