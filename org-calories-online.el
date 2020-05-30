@@ -51,7 +51,7 @@
       (while (re-search-forward
               "window.location.href='\\([^']*\\)';\"><div id='acelement.'>\\(.*+?\\)</div>" nil t)
         (let* ((href (buffer-substring-no-properties (match-beginning 1)
-                                                    (match-end 1)))
+                                                     (match-end 1)))
                (titl (buffer-substring-no-properties (match-beginning 2)
                                                      (match-end 2)))
                (titl (mapconcat 'identity
