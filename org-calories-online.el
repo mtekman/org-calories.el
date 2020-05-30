@@ -1,13 +1,44 @@
+;;; org-calories-online.el --- Search online for Food information -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2020 Mehmet Tekman <mtekman89@gmail.com>
+
+;; Author: Mehmet Tekman
+;; URL: https://github.com/mtekman/org-calories.el
+;; Keywords: outlines
+;; Package-Requires: ((emacs "26.1") (dash "2.17.0") (org "9.1.6"))
+;; Version: 0.1
+
+;;; License:
+
+;; This program is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation, either version 3 of the License, or
+;; (at your option) any later version.
+
+;; This program is distributed in the hope that it will be useful,
+;; but WITHOUT ANY WARRANTY; without even the implied warranty of
+;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+;; GNU General Public License for more details.
+
+;;; Commentary:
+
+;; See org-calories.el
 
 ;;; Code:
-(defvar org-calories-online--base "https://fddb.info/xml/ac/1/en")
+(defconst org-calories-online--base "https://fddb.info/xml/ac/1/en")
 
-(defun org-calories-testoptions (qsearch)
-  "Search query QSEARCH."
-  (completing-read (format "Food options for '%s' (hit TAB)\n" qsearch)
-                   (--map (plist-get it :user-options)
-                          (org-calories-online--search qsearch))
-                   nil t ""))
+
+(defun org-calories-online-search (qsearch)
+  "Search online for food query QSEARCH."
+  (interactive "sFood Query: ")
+  (let* ((datalist (org-calories-online--search qsearch))
+         (userres (completing-read (format "Food options for '%s' (hit TAB)\n" qsearch)
+                                   (--map (plist-get it :user-options) datalist)
+                                   nil t ""))
+         (datamatch (car (--filter (string= userres (plist-get it :user-options))
+                                   datalist))))
+    datamatch))
+
 
 (defun org-calories-online--search (query)
   "Search food QUERY."
@@ -112,58 +143,6 @@
             (push (cons item valu) tabdata))))
       tabdata)))
 
+(provide 'org-calories-online)
+;;; org-calories-online.el ends here
 
-;; (defun online-search (fname))
-
-;; (defun online-parselist (results)
-;;   "Parse web RESULTS into plists."
-;;   (loop for res in results
-;;         collect (online-parseresult res)))
-
-;; (defcustom userformat-string "something"
-;;   "Carb Fibre Sugars Fat Protein Sodium."
-;;   :type 'string
-;;   :group 'org-calories)
-
-;; (defun online-userlist (plist)
-;;   "Convert food PLIST into a description."
-;;   (loop for pl in plist
-;;         collect (format userformat-string plist)))
-
-;; (defun online-retrieve (fname)
-;;   "Search for FNAME in backend database"
-;;   (let* ((results (online-search fname))
-;;          (resplist (online-parselist results))
-;;          (resoffer (online-userlist resplist)))
-;;     (if resplist
-;;         (read-answer (concat fname ": ") resoffer)
-;;       (message "No results found."))))
-
-(Calories . 220 kcal)
-(Portion .   100 g)
-(Carbohydrates . 37 g)
-(Dietary fibre . 5.9 g)
-(thereof Sugar . 1.2 g)
-(Protein . 8.5 g)
-(Fat . 4.4 g)
-
-(Iodine . 1 mg)
-(Fluorine . 0.01 mg)
-(Copper . 0.2 mg)
-(Phosphorus . 138 mg)
-(Calcium . 23 mg)
-(Potassium . 171 mg)
-(Sulphur . 41 mg)
-(Manganese . 1.3 mg)
-(Chlorine . 670 mg)
-(Magnesium . 46 mg)
-(Zinc . 1.5 mg)
-(Iron . 1.6 mg)
-(Salt . 1.1481 g)
-(Vitamin B6 . 0.08 mg)
-(Riboflavin . 0.05 mg)
-(Thiamine . 0.18 mg)
-(Vitamin E . 0.7 mg)
-(Water content . 43%)
-
-(Calorific value . 921 kJ)
