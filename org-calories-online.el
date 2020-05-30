@@ -4,11 +4,10 @@
 
 (defun org-calories-testoptions (qsearch)
   "Search query QSEARCH."
-  (completing-read "Food options:\n"
+  (completing-read (format "Food options for '%s' (hit TAB)\n" qsearch)
                    (--map (plist-get it :user-options)
                           (org-calories-online--search qsearch))
-                   nil t))
-
+                   nil t ""))
 
 (defun org-calories-online--search (query)
   "Search food QUERY."
