@@ -52,6 +52,7 @@
 
 (defun org-calories-db--scale-item (type plist-info amount)
   "For item TYPE, scale PLIST-INFO data by AMOUNT."
+  (ignore type) ;; TODO: cleanup later
   (let* ((scaleamount (plist-get plist-info :amount))
          (scalefractn (/ (float scaleamount) amount))
          (newplist nil))

@@ -36,6 +36,8 @@
   :type 'string)
 
 
+(setq minibuffer-local-filename-completion-map nil) ;; prevents space from being a keyword during completion
+
 ;; Strings
 (defconst org-calories-log-str-ltitled "#+TITLE: Daily Logs")
 (defconst org-calories-log-str-targets "*** Targets / Macros")
@@ -137,6 +139,7 @@
   (interactive
    (list (completing-read "Food: "
                           (org-calories-log--completions 'foods))))
+  ;; TODO: Override space
   (org-calories-log--prelog 'foods food)
   ;; At first empty
   (let* ((food-info (org-calories-entry--foods-retrieve food))

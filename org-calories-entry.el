@@ -68,14 +68,26 @@ Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
          (plistinp (org-calories-db--foods2plist (split-string result))))
     (org-calories-entry--foods-validateentry plistinp)))
 
-(defun org-calories-entry--foods-insert (fname &optional plist-info)
+(defun org-calories-entry-foods-insert (fname &optional plist-info)
   "Insert food FNAME with PLIST-INFO."
   (interactive "sFood Name: ")
   (if (org-calories-entry--foods-retrieve fname)
       (message "Food '%s' already exists in the food table, not inserting." fname)
-    (cl-pushnew
-     (cons fname (or plist-info (org-calories-entry--foods-newentry fname)))
-     org-calories-db--foods :key #'car)
+    (unless plist-info
+      (let* ((insmeth (read-multiple-choice "Insert method: "
+                                            '((?o "Online Search")
+                                              (?m "Manual Input"))))
+             (chosen (car insmeth)))
+        (cond ((eq chosen ?o)
+               (--> (org-calories-online-search fname)
+                    (setq fname (plist-get it :food)
+                          plist-info (plist-get it :food-info))))
+              ((eq chosen ?m)
+               (setq plist-info (org-calories-entry--foods-newentry fname)))
+              (t (user-error "Invalid selection")))))
+    ;;      
+    (cl-pushnew (cons fname plist-info)
+                org-calories-db--foods :key #'car)
     (org-calories-db--sync 'foods)))
 
 (defun org-calories-entry--foods-retrieve (fname)
@@ -161,11 +173,11 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
 
 
 ;;;; -{Tests}-
-;; (org-calories-entry--foods-insert "fruit1" '(:kc 110 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry--foods-insert "fruit2" '(:kc 120 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry--foods-insert "fruit3" '(:kc 130 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry--foods-retrieve "fruit2")
-;; (org-calories-entry--foods-insert "chew")
+;; (org-calories-entry-foods-insert "fruit1" '(:kc 110 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry-foods-insert "fruit2" '(:kc 120 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry-foods-insert "fruit3" '(:kc 130 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry-foods-retrieve "fruit2")
+;; (org-calories-entry-foods-insert "chew")
 ;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :amount 30) (:food "fruit2" :amount 120) (:food "fruit3" :amount 50)))
 ;; (org-calories-entry--recipes-retrieve "fruit salad")
 
