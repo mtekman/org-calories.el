@@ -18,31 +18,45 @@
     (with-current-buffer results-buffer
       (goto-char 0)
       (while (re-search-forward
-              ;; TODO: <b>bold</b> elements are also terminal nodes in match 2
-              "window.location.href='\\([^']*\\)';\"><div id='acelement.'>\\([^<]*\\)<" nil t)
-        (let ((href (buffer-substring-no-properties (match-beginning 1)
+              "window.location.href='\\([^']*\\)';\"><div id='acelement.'>\\(.*+?\\)</div>" nil t)
+        (let* ((href (buffer-substring-no-properties (match-beginning 1)
                                                     (match-end 1)))
-              (titl (buffer-substring-no-properties (match-beginning 2)
-                                                    (match-end 2))))
+               (titl (buffer-substring-no-properties (match-beginning 2)
+                                                     (match-end 2)))
+               (titl (mapconcat 'identity
+                                (--filter (not(member it '("" "b")))
+                                          (split-string titl "[</>]")) "")))
           (push (list titl href (org-calories-online--extractrelevant
                                  (org-calories-online--getinfo href)))
                 reftitle)))
       ;; Format list
-      (--map (list :food (car it)
-                   :food-info (nth 2 it)
-                   :user-options
-                   (format "%s -- [%s %s %s (%s %s) %s %s %s]"
-                           (car it)
-                           (format "%3d%s" (plist-get (nth 2 it) :amount)
-                                   (plist-get (nth 2 it) :unit))
-                           (format "%3dkCal" (plist-get (nth 2 it) :kc))
-                           (format "%3dg" (plist-get (nth 2 it) :carbs))
-                           (format "%3dg" (plist-get (nth 2 it) :sugars))
-                           (format "%3dg" (plist-get (nth 2 it) :fibre))
-                           (format "%3dg" (plist-get (nth 2 it) :protein))
-                           (format "%3dg" (plist-get (nth 2 it) :fat))
-                           (format "%3dmg" (plist-get (nth 2 it) :sodium))))
-                    reftitle))))
+      (let* ((widthspacing (- (frame-width) (+ 8 5 4 4 4 4 4 5 11)))
+             (title-format (format "%%%ds" (- widthspacing)))
+             (form-string (concat title-format "\t%8s %5s %4s (%4s %4s) %4s %4s %5s"))
+             (food-matches
+              (--map (list :food (car it)
+                           :food-info (nth 2 it)
+                           :user-options
+                           (format form-string
+                                   (if (> (length (car it)) widthspacing)
+                                       (substring (car it) 0 widthspacing)
+                                     (car it))
+                                   (format "%3d%s" (plist-get (nth 2 it) :amount)
+                                           (plist-get (nth 2 it) :unit))
+                                   (format "%3dkC" (plist-get (nth 2 it) :kc))
+                                   (format "%3dg" (plist-get (nth 2 it) :carbs))
+                                   (format "%3dg" (plist-get (nth 2 it) :sugars))
+                                   (format "%3dg" (plist-get (nth 2 it) :fibre))
+                                   (format "%3dg" (plist-get (nth 2 it) :protein))
+                                   (format "%3dg" (plist-get (nth 2 it) :fat))
+                                   (format "%3dmg" (plist-get (nth 2 it) :sodium))))
+                     reftitle)))
+        (push (list :food "--" :food-info nil
+                    :user-options (format form-string
+                                          (make-string widthspacing ?-)
+                                          "Amount" "kCal" "Carb" "Sug" "Fib" "Pro" "Fat" "Sodm"))
+              food-matches)
+        food-matches))))
 
 
 (defun org-calories-online--inlineextract (key pinfo)
