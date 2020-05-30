@@ -97,8 +97,9 @@
         (let* ((kvalunit (split-string val))
                (kval (string-to-number (car kvalunit)))
                (kunt (cadr kvalunit)))
-          (if (member kunt '("kcal" "g" "mg"))
+          (if (member kunt '("kcal" "g" "mg" "ml"))
               (cons kval kunt)
+            (debug key pinfo)
             (user-error "Could not parse %d %s" kval kunt)))
       (cons 0 "g"))))
 
