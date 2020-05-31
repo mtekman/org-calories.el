@@ -79,12 +79,14 @@ Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
              (chosen (car insmeth)))
         (cond ((eq chosen ?o)
                (--> (org-calories-online-search fname)
-                    (setq fname (plist-get it :food)
-                          plist-info (plist-get it :food-info))))
+                    (let* ((onlname (plist-get it :food))
+                           (newname (read-string "Food name: " onlname)))
+                      (setq fname newname
+                            plist-info (plist-get it :food-info)))))
               ((eq chosen ?m)
                (setq plist-info (org-calories-entry--foods-newentry fname)))
               (t (user-error "Invalid selection")))))
-    ;;      
+    ;;
     (cl-pushnew (cons fname plist-info)
                 org-calories-db--foods :key #'car)
     (org-calories-db--sync 'foods))
