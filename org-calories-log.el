@@ -114,18 +114,17 @@
   (insert (format (if (floatp calories) "%.2f" "%d") calories))
   (org-table-next-field))
 
+;; (defun org-calories-log--prelog1 (type name)
+;;   "Preamble for importing NAME of TYPE, and finding the right table."
+;;   (unless (org-calories-entry--foods-retrieve name)
+;;     (if (y-or-n-p (format "Food '%s' does not exist, insert new? " name))
+;;         (org-calories-entry-foods-insert name))))
+
+
 (defun org-calories-log--prelog (type name)
   "Preamble for importing NAME of TYPE, and finding the right table."
-  (let* ((captype (capitalize (format "%s" type)))
-         (funcretr (intern (format "org-calories-entry--%s-retrieve" type)))
-         (funcinst (intern (format "org-calories-entry-%s-insert" type)))
-         (type-entry (funcall funcretr name))
-         ;;(tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
-         (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
-    (unless type-entry
-      (if (y-or-n-p (format "%s '%s' does not exist, insert new %s? "
-                            captype name captype))
-          (funcall funcinst name)))
+  (let (;;(tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
+        (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
     (org-calories-log--makeheaders)
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
@@ -142,6 +141,12 @@
   ;; TODO: Override space
   (org-calories-log--prelog 'foods food)
   ;; At first empty
+  (unless (org-calories-entry--foods-retrieve food)
+    (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
+        (let ((newinfo (org-calories-entry-foods-insert food)))
+          (setq food (car newinfo)
+                food-info (cdr newinfo)))))
+  ;;
   (let* ((food-info (org-calories-entry--foods-retrieve food))
          (amount-want (or portion (read-number (message (format
                                                          "[%s] -- %s\nWhat portion of food (g)? "
@@ -159,7 +164,12 @@
   "Log RECIPE entry with optional PORTION."
   (interactive
    (list (completing-read "Recipe: " (org-calories-log--completions 'recipes))))
-  (org-calories-log--prelog 'recipes recipe)
+  (org-calories-log--prelog)
+  ;;
+  (unless (org-calories-entry--recipe-retrieve recipe)
+    (if (y-or-n-p (format "Recipe '%s' does not exist, insert new? " recipe))
+        (org-calories-entry-recipe-insert recipe)))
+  ;;
   (let* ((recipe-info (org-calories-entry--recipes-retrieve recipe))
          (amount-want (or portion (read-number (message (format
                                                          "[%s] -- %s\nWhat amount of recipe? "
@@ -181,7 +191,12 @@
 The unit does not actually matter because it's set by the database and we are just scaling it."
   (interactive
    (list (completing-read "Exercise: " (org-calories-log--completions 'exercises))))
-  (org-calories-log--prelog 'exercises exercise)
+  (org-calories-log--prelog)
+  ;;
+  (unless (org-calories-entry--exercise-retrieve exercise)
+    (if (y-or-n-p (format "Exercise '%s' does not exist, insert new? " exercise))
+        (org-calories-entry-exercise-insert exercise)))
+  ;;
   (let* ((exercise-info (org-calories-entry--exercises-retrieve exercise))
          (amount-want (or amount
                           (read-number (message (format

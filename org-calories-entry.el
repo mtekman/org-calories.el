@@ -61,7 +61,6 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
 
 (defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."
-  ;;(if (y-or-n-p "Search online? ") (online-retrieve fname)
   (let* ((result (read-string
                   (concat "[" fname "] -- kCals and Grams:\n\
 Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
@@ -88,7 +87,9 @@ Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
     ;;      
     (cl-pushnew (cons fname plist-info)
                 org-calories-db--foods :key #'car)
-    (org-calories-db--sync 'foods)))
+    (org-calories-db--sync 'foods))
+  ;; echo out the details in case they were updated
+  (cons fname plist-info))
 
 (defun org-calories-entry--foods-retrieve (fname)
   "Retrieve food plist on FNAME from db."
