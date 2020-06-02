@@ -49,7 +49,6 @@
   "Make table headers."
   (let ((hed-year (format-time-string "* %Y"))
         (hed-month (format-time-string "** %m - %b"))
-        (tbl-macros (format-time-string "%Y-%m-Macros"))
         (tbl-logs (format-time-string "%Y-%m-Logbook")))
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (save-excursion
@@ -58,26 +57,18 @@
         (unless (search-forward org-calories-log-str-ltitled nil t)
           (insert org-calories-log-str-ltitled)
           (insert "\n\n"))
+        ;; Search for Macros
+        (unless (search-forward "* Macros" nil t)
+          (org-calories-db--maketable "* Macros" "Macros"
+                                      "| Timestamp | kCal | Carbs | Fibre | Sugars | Protein | Fat | Exercise | Water |"))
         ;; Search for Year
         (if (search-forward hed-year nil t)
             (unless (search-forward hed-month nil t)
-              ;; insert just month
-              (insert (format "\n%s\n" hed-month)))
+              ;; insert month and table
+              (org-calories-db--maketable org-calories-log-str-daylogs tbl-logs org-calories-log-hed-daylogs))
           ;; otherwise insert year and month at end of buffer
           (goto-char (point-max))
-          (insert (format "\n%s\n%s\n" hed-year hed-month)))
-        ;; Search for headers
-        ;; Search for macros table
-        (unless (search-forward tbl-macros nil t)
-          (org-calories-db--maketable org-calories-log-str-targets tbl-macros org-calories-log-hed-targets)
-          (forward-line -2)
-          (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
-          (dolist (var '(kC Carbs Fibre Sugars Protein Fat Exercise Water))
-            (insert (format "| %s\n" var)))
-          (forward-line -1)
-          (org-table-align))
-        ;; Search for logs table
-        (unless (search-forward tbl-logs nil t)
+          (insert (format "\n%s\n" hed-year))
           (org-calories-db--maketable org-calories-log-str-daylogs tbl-logs org-calories-log-hed-daylogs))))))
 
 (defun org-calories-log--completions (type)
@@ -121,7 +112,7 @@
 ;;         (org-calories-entry-foods-insert name))))
 
 
-(defun org-calories-log--prelog (type name)
+(defun org-calories-log--prelog ()
   "Preamble for importing NAME of TYPE, and finding the right table."
   (let (;;(tbl-macros (format-time-string "#+NAME:%Y-%m-Macros"))
         (tbl-logs (format-time-string "#+NAME:%Y-%m-Logbook")))
@@ -139,7 +130,7 @@
    (list (completing-read "Food: "
                           (org-calories-log--completions 'foods))))
   ;; TODO: Override space
-  (org-calories-log--prelog 'foods food)
+  (org-calories-log--prelog)
   ;; At first empty
   (unless (org-calories-entry--foods-retrieve food)
     (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))

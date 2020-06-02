@@ -94,8 +94,9 @@
 (defun org-calories-db--maketable (section title header)
   "Insert table with SECTION, TITLE, and HEADER."
   (insert (format "\n\n%s\n\n" section))
-  (insert (format "#+NAME:%s\n" title))
-  (insert header)
+  (insert (format "#+NAME:%s" title))
+  (org-cycle)
+  (insert (format "\n%s" header))
   (org-table-insert-hline)
   (forward-char 1)
   (org-table-insert-row -1)
