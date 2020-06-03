@@ -117,18 +117,18 @@
             (progn (beginning-of-line)
                    (forward-line -1))
           (goto-char (point-max)))
-      (org-calories-db--maketable org-calories-db--str-dbfood "Foods" org-calories-db--hed-dbfood))
+      (org-calories-db--maketable org-calories-db--str-dbfood "Food" org-calories-db--hed-dbfood))
     ;; Make Recipe, vor Exercises
     (if (search-forward org-calories-db--str-dbrecp nil t)
         (if (search-forward org-calories-db--str-dbexer nil t)
             (progn (beginning-of-line)
                    (forward-line -1))
           (goto-char (point-max)))
-      (org-calories-db--maketable org-calories-db--str-dbrecp "Recipes" org-calories-db--hed-dbrecp))
+      (org-calories-db--maketable org-calories-db--str-dbrecp "Recipe" org-calories-db--hed-dbrecp))
     ;; Exercises, nach alles
     (if (search-forward org-calories-db--str-dbexer nil t)
         (goto-char (point-max))
-      (org-calories-db--maketable org-calories-db--str-dbexer "Exercises" org-calories-db--hed-dbexer))))
+      (org-calories-db--maketable org-calories-db--str-dbexer "Exercise" org-calories-db--hed-dbexer))))
 
 
 (defun org-calories-db--generate (&optional type)

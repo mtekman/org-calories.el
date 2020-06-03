@@ -64,8 +64,7 @@
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
       (unless (search-forward tblym nil t)
-        (user-error "Macros table %4d-%02d-Logbook not available"
-                    myear mmont))
+        (user-error "Macros table %4d-%02d-Logbook not available" myear mmont))
       (forward-line 1)
       (let ((list-items nil))
         (dolist (line (cddr (org-table-to-lisp)))
