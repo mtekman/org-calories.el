@@ -157,7 +157,7 @@
    (list (completing-read "Recipe: " (org-calories-log--completions 'recipes))))
   (org-calories-log--prelog)
   ;;
-  (unless (org-calories-entry--recipe-retrieve recipe)
+  (unless (org-calories-entry--recipes-retrieve recipe)
     (if (y-or-n-p (format "Recipe '%s' does not exist, insert new? " recipe))
         (org-calories-entry-recipe-insert recipe)))
   ;;
