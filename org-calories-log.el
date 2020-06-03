@@ -199,6 +199,7 @@ The unit does not actually matter because it's set by the database and we are ju
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'exercise exercise amount-want
+                                (- scaled-calories)) ;; negative kc
       (org-calories-db--trimandsort)
       (save-buffer))))
 

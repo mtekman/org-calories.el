@@ -150,8 +150,7 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
              (foodscal (org-calories-db--scale-item foodinfo fportion)))
         (setq food-total (org-calories-entry--foods-add food-total foodscal))))
     ;; here we add a new field to make it recipe compliant
-    (setq food-total (plist-put food-total :amount amount-native))
-    food-total))
+    (append (list :amount amount-native :unit "recipe") food-total)))
 
 (defun org-calories-entry--exercises-newentry (ename)
   "Create a new plist exercise entry named ENAME."
