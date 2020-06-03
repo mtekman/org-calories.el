@@ -147,7 +147,7 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
       (let* ((foodname (plist-get var :food))
              (fportion (plist-get var :amount))
              (foodinfo (org-calories-entry--foods-retrieve foodname))
-             (foodscal (org-calories-db--scale-item 'foods foodinfo fportion)))
+             (foodscal (org-calories-db--scale-item foodinfo fportion)))
         (setq food-total (org-calories-entry--foods-add food-total foodscal))))
     ;; here we add a new field to make it recipe compliant
     (setq food-total (plist-put food-total :amount amount-native))

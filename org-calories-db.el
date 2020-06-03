@@ -50,9 +50,8 @@
   "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
   (string-to-number (nth num pin)))
 
-(defun org-calories-db--scale-item (type plist-info amount)
+(defun org-calories-db--scale-item (plist-info amount)
   "For item TYPE, scale PLIST-INFO data by AMOUNT."
-  (ignore type) ;; TODO: cleanup later
   (let* ((scaleamount (plist-get plist-info :amount))
          (scalefractn (/ (float scaleamount) amount))
          (newplist nil))
