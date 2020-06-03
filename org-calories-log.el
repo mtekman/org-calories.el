@@ -142,12 +142,12 @@
          (amount-want (or portion (read-number (message (format
                                                          "[%s] -- %s\nWhat portion of food (g)? "
                                                          food food-info)))))
-         (scaled-food (org-calories-db--scale-item 'foods food-info amount-want))
+         (scaled-food (org-calories-db--scale-item food-info amount-want))
          (scaled-calories (plist-get scaled-food :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (org-calories-log--goto-tableend)
-      (org-calories-log--insert 'foods food amount-want scaled-calories)
+      (org-calories-log--insert 'food food amount-want scaled-calories)
       (org-calories-db--trimandsort)
       (save-buffer))))
 
@@ -168,12 +168,12 @@
          ;; the above has portion value of -1, but is the total
          ;; food value of the native portion of that recipe
          (calced-recipe (org-calories-entry--recipes-calculate recipe-info))
-         (scaled-recipe (org-calories-db--scale-item 'recipes calced-recipe amount-want))
+         (scaled-recipe (org-calories-db--scale-item calced-recipe amount-want))
          (scaled-calories (plist-get scaled-recipe :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (org-calories-log--goto-tableend)
-      (org-calories-log--insert 'recipes recipe amount-want scaled-calories)
+      (org-calories-log--insert 'recipe recipe amount-want scaled-calories)
       (org-calories-db--trimandsort)
       (save-buffer))))
 
@@ -184,7 +184,7 @@ The unit does not actually matter because it's set by the database and we are ju
    (list (completing-read "Exercise: " (org-calories-log--completions 'exercises))))
   (org-calories-log--prelog)
   ;;
-  (unless (org-calories-entry--exercise-retrieve exercise)
+  (unless (org-calories-entry--exercises-retrieve exercise)
     (if (y-or-n-p (format "Exercise '%s' does not exist, insert new? " exercise))
         (org-calories-entry-exercise-insert exercise)))
   ;;
@@ -193,12 +193,12 @@ The unit does not actually matter because it's set by the database and we are ju
                           (read-number (message (format
                                                  "[%s] -- %s\nWhat amount of exercise? "
                                                  exercise exercise-info)))))
-         (scaled-exercise (org-calories-db--scale-item 'exercises exercise-info amount-want))
+         (scaled-exercise (org-calories-db--scale-item exercise-info amount-want))
          (scaled-calories (plist-get scaled-exercise :kc)))
     ;; Currently at table head
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (org-calories-log--goto-tableend)
-      (org-calories-log--insert 'exercises exercise amount-want scaled-calories)
+      (org-calories-log--insert 'exercise exercise amount-want
       (org-calories-db--trimandsort)
       (save-buffer))))
 
