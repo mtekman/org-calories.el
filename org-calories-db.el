@@ -61,14 +61,6 @@
         (push var newplist))))) ;; keywords or strings
 
 
-(defun org-calories-db--foods2plist (pin)
-  "Convert a single entry list of PIN to food plist."
-  (list :amount (org-calories-db--s2n 0 pin) :unit (nth 1 pin)
-        :kc (org-calories-db--s2n 2 pin) :carbs (org-calories-db--s2n 3 pin)
-        :fibre (org-calories-db--s2n 4 pin) :sugars (org-calories-db--s2n 5 pin)
-        :protein (org-calories-db--s2n 6 pin) :fat (org-calories-db--s2n 7 pin)
-        :sodium (org-calories-db--s2n 8 pin)))
-
 (defun org-calories-db--recipes2plist (pin)
   "Convert a single entry list of PIN to recipes plist."
   (let ((recipeamt (string-to-number (car pin)))
@@ -129,6 +121,19 @@
         (goto-char (point-max))
       (org-calories-db--maketable org-calories-db--str-dbexer "Exercise" org-calories-db--hed-dbexer))))
 
+(defun org-calories-db--parsetypes (unrefinedlist)
+  "Change UNREFINEDLIST of strings into keywords and numbers where possible."
+  (-map (lambda (str)
+          (if (keywordp str) str
+            (if (string-prefix-p ":" str) (intern str)
+             ;; string to number if possible
+             (let ((nval (string-to-number str)))
+               ;; 0 is the default convert value
+               (if (eq nval 0)
+                   (if (string= "0" str) 0 str)
+                 nval)))))
+         unrefinedlist))
+
 
 (defun org-calories-db--generate (&optional type)
   "Generate the database from the file, and limit to TYPE."
@@ -137,41 +142,29 @@
     ;; Parse Tables
     (goto-char 0)
     (let ((sstring nil)
-          (s2plist nil)
           (dbsymbl nil))
       (cond ((eq type 'foods) (setq sstring org-calories-db--str-dbfood
-                                    s2plist #'org-calories-db--foods2plist
                                     dbsymbl 'org-calories-db--foods))
             ((eq type 'recipes) (setq sstring org-calories-db--str-dbrecp
-                                      s2plist #'org-calories-db--recipes2plist
                                       dbsymbl 'org-calories-db--recipes))
             ((eq type 'exercises) (setq sstring org-calories-db--str-dbexer
-                                        s2plist #'org-calories-db--exercises2plist
                                         dbsymbl 'org-calories-db--exercises))
             (t (user-error "Database type doesn't exist")))
       ;;
       (if (search-forward sstring nil t)
           (if (re-search-forward org-table-line-regexp nil t)
-              (dolist (row (cddr (org-table-to-lisp)))
-                (let ((nam (car row))
-                      (pin (cdr row)))
-                  (if (> (length nam) 1)
-                      (cl-pushnew (cons nam (funcall s2plist pin))
-                                  (symbol-value dbsymbl)
-                                  :test #'string= :key #'car)))))))))
+              (let* ((table-data (org-table-to-lisp))
+                     (header-order (--map (intern it) (car (org-table-to-lisp)))))
+                (dolist (row (cddr table-data))
+                  (let* ((paired-data (org-calories-db--parsetypes
+                                      (--reduce-from (append acc it) nil
+                                                     (--zip-with (list it other)
+                                                                 header-order
+                                                                 row))))
+                         (data-noname (map-delete paired-data :name)))
+                    (push (cons (plist-get paired-data :name) data-noname)
+                          (symbol-value dbsymbl))))))))))
 
-
-;; (defun database-table-to-list (type)
-;;   (let* ((tdata (org-table-to-lisp))
-;;          (fdata (cddr tdata))
-;;          (parser (cond ((eq type 'foods) #'org-calories-db--foods2plist)
-;;                        ((eq type 'recipes) #'org-calories-db--recipes2plist)
-;;                        (t (user-error "Doesn't exist.? "))))
-;;          (res-alist nil))
-;;     (dolist (ldata fdata res-alist)
-;;       (let ((fname (car ldata))
-;;             (fdata (funcall parser (cdr ldata))))
-;;         (pushnew (cons fname fdata) res-alist :key #'car)))))
 
 
 (defun org-calories-db--kill-table ()
@@ -206,17 +199,20 @@
                  (when (re-search-forward org-table-line-regexp nil t)
                    (unless org-calories-db--foods
                      (user-error "Food database not populated, quitting"))
-                   (org-calories-db--kill-table)
-                   ;; Dump current food database
-                   (dolist (entry org-calories-db--foods)
-                     (insert (car entry)) ;; food name
-                     (org-table-next-field)
-                     (dolist (keyw '(:amount :unit :kc  :carbs :fibre :sugars
-                                             :protein :fat :sodium))
-                       (let ((am (plist-get (cdr entry) keyw)))
-                         (insert (format (if (floatp am) "%.1f" "%s") am)))
-                       (org-table-next-field)))
-                   (org-calories-db--trimandsort))))
+                   ;; Get the existing order of keywords from the table header
+                   (let ((header-order (--map (intern it) (car (org-table-to-lisp)))))
+                     (org-calories-db--kill-table)
+                     (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
+                     ;; Dump current food database
+                     (dolist (entry (--map (cons :name it)
+                                           (--sort (car it)
+                                                   org-calories-db--foods))) ;; rows
+                       (dolist (keyw header-order)                  ;; columns
+                         (let ((am (plist-get entry keyw)))
+                           (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
+                       (insert "|\n")))  ;;(org-table-next-field))))
+                   (when (re-search-backward org-table-line-regexp nil t)
+                     (org-table-align)))))
             ((eq type 'recipes)
              (if (search-forward org-calories-db--str-dbrecp nil t)
                  (when (re-search-forward org-table-line-regexp nil t)
