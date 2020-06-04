@@ -29,7 +29,7 @@
 (require 'subr-x)
 (require 'dash)
 
-(defcustom org-calories-db-file "~/database.org"
+(defcustom org-calories-db-file "~/repos/_mtekman/myorg/gtd/database.org"
   "Location of database file."
   :group 'org-calories
   :type 'string)

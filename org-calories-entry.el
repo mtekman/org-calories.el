@@ -55,9 +55,9 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
               fibre protein fat newkc kc newkc))
             (setq kc newkc)
           (message judgement))))
-    `(:amount ,amount :unit ,unit :kc ,kc
-              :carbs ,carbs :fibre ,fibre :sugars ,sugars
-              :protein ,protein :fat ,fat :sodium ,sodium)))
+    `(:amount ,amount :unit ,unit :kc ,kc :fat ,fat
+              :carbs ,carbs :sugars ,sugars :fibre ,fibre
+              :protein ,protein :sodium ,sodium)))
 
 (defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."

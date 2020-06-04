@@ -30,7 +30,7 @@
 (require 'org-calories-db)
 (require 'org-calories-entry)
 
-(defcustom org-calories-log-file "~/logbook.org"
+(defcustom org-calories-log-file "~/repos/_mtekman/myorg/gtd/logbook.org"
   "Location of daily logging file."
   :group 'org-calories
   :type 'string)
