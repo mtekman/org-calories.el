@@ -82,6 +82,7 @@
   Please use either 'mins' or 'lots'" it))))))
     `(:amount ,(org-calories-db--s2n 0 pin) :unit ,unit :kc ,(org-calories-db--s2n 2 pin))))
 
+
 (defun org-calories-db--maketable (section title header)
   "Insert table with SECTION, TITLE, and HEADER."
   (insert (format "\n\n%s\n\n" section))
@@ -162,8 +163,9 @@
                                                                  header-order
                                                                  row))))
                          (data-noname (map-delete paired-data :name)))
-                    (push (cons (plist-get paired-data :name) data-noname)
-                          (symbol-value dbsymbl))))))))))
+                    (cl-pushnew (cons (plist-get paired-data :name) data-noname)
+                                (symbol-value dbsymbl)
+                                :test #'string= :key #'car)))))))))
 
 
 
@@ -194,69 +196,37 @@
     ;; Parse Tables
     (save-excursion
       (goto-char 0)
-      (cond ((eq type 'foods)
-             (if (search-forward org-calories-db--str-dbfood nil t)
-                 (when (re-search-forward org-table-line-regexp nil t)
-                   (unless org-calories-db--foods
-                     (user-error "Food database not populated, quitting"))
-                   ;; Get the existing order of keywords from the table header
-                   (let ((header-order (--map (intern it) (car (org-table-to-lisp)))))
-                     (org-calories-db--kill-table)
-                     (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
-                     ;; Dump current food database
-                     (dolist (entry (--map (cons :name it)
-                                           (--sort (car it)
-                                                   org-calories-db--foods))) ;; rows
-                       (dolist (keyw header-order)                  ;; columns
-                         (let ((am (plist-get entry keyw)))
-                           (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
-                       (insert "|\n")))  ;;(org-table-next-field))))
-                   (when (re-search-backward org-table-line-regexp nil t)
-                     (org-table-align)))))
-            ((eq type 'recipes)
-             (if (search-forward org-calories-db--str-dbrecp nil t)
-                 (when (re-search-forward org-table-line-regexp nil t)
-                   (unless org-calories-db--recipes
-                     (user-error "Recipe database not populated, quitting"))
-                   (org-calories-db--kill-table)
-                   ;; Dump current recipes database
-                   (dolist (entry org-calories-db--recipes)
-                     (insert (car entry)) ;; recipe name
-                     (org-table-next-field)
-                     (insert (format ;; amount
-                              "%s" (plist-get (cdr entry) :amount)))
-                     (org-table-next-field)
-                     (let ((inglist nil))
-                       (dolist (ingr (plist-get (cdr entry) :ingredients))
-                         (let ((food (plist-get ingr :food))
-                               (port (plist-get ingr :amount)))
-                           (push (format "%s::%d" food port) inglist)))
-                       (insert (format "%s" (string-join inglist ",,")))
-                       (org-table-next-field)))
-                   (org-calories-db--trimandsort))))
-            ((eq type 'exercises)
-             (if (search-forward org-calories-db--str-dbexer nil t)
-                 (when (re-search-forward org-table-line-regexp nil t)
-                   (unless org-calories-db--exercises
-                     (user-error "Exercise database not populated, quitting"))
-                   (org-calories-db--kill-table)
-                   ;; Dump current exercise database
-                   (dolist (entry org-calories-db--exercises)
-                     (insert (car entry)) ;; exercise name
-                     (org-table-next-field)
-                     (let ((dur (plist-get (cdr entry) :amount))
-                           (unt (plist-get (cdr entry) :unit))
-                           (cal (plist-get (cdr entry) :kc)))
-                       (insert (format "%d" dur))
-                       (org-table-next-field)
-                       (insert (format "%s" unt))
-                       (org-table-next-field)
-                       (insert (format "%d" cal))
-                       (org-table-next-field)))
-                   (org-calories-db--trimandsort))))
-            (t (user-error "Doesn't exist")))
-      (save-buffer)
-      (message "synced %s to %s" type org-calories-db-file))))
+      (let ((database nil)
+            (table nil))
+        (cond ((eq type 'foods) (setq sstring org-calories-db--str-dbfood
+                                      dbsymbl 'org-calories-db--foods))
+              ((eq type 'recipes) (setq sstring org-calories-db--str-dbrecp
+                                        dbsymbl 'org-calories-db--recipes))
+              ((eq type 'exercises) (setq sstring org-calories-db--str-dbexer
+                                          dbsymbl 'org-calories-db--exercises))
+            (t (user-error "Database type doesn't exist")))
+        ;; General
+        (if (search-forward sstring nil t)
+            (when (re-search-forward org-table-line-regexp nil t)
+              (unless (symbol-value dbsymbl)
+                (user-error "Database not populated, quitting"))
+              ;; Get the existing order of keywords from the table header
+              (let ((header-order (--map (intern it) (car (org-table-to-lisp)))))
+                (org-calories-db--kill-table)
+                (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
+                ;; Dump current database
+                (dolist (entry (--map (cons :name it)
+                                      (--sort (car it)
+                                              (symbol-value dbsymbl)))) ;; rows
+                  (dolist (keyw header-order)                  ;; columns
+                    (let ((am (plist-get entry keyw)))
+                      (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
+                  (insert "|\n")))  ;;(org-table-next-field))))
+              (when (re-search-backward org-table-line-regexp nil t)
+                (org-table-align))))))
+    (save-buffer)
+    (message "synced %s to %s" type org-calories-db-file)))
+
 
 (provide 'org-calories-db)
 ;;; org-calories-db.el ends here
