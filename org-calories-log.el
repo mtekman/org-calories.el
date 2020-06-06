@@ -148,7 +148,7 @@
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'food food amount-want scaled-calories)
-      (org-calories-db--trimandsort)
+      (org-calories-db--trimandsort t)
       (save-buffer))))
 
 (defun org-calories-log-recipe (recipe &optional portion)
@@ -174,7 +174,7 @@
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'recipe recipe amount-want scaled-calories)
-      (org-calories-db--trimandsort)
+      (org-calories-db--trimandsort t)
       (save-buffer))))
 
 (defun org-calories-log-exercise (exercise &optional amount)
@@ -200,7 +200,7 @@ The unit does not actually matter because it's set by the database and we are ju
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'exercise exercise amount-want
                                 (- scaled-calories)) ;; negative kc
-      (org-calories-db--trimandsort)
+      (org-calories-db--trimandsort t)
       (save-buffer))))
 
 
