@@ -135,6 +135,11 @@
                  nval)))))
         unrefinedlist))
 
+(defun org-calories-db--pairtypes (headers data)
+  "Pair keyword HEADERS with DATA."
+  (org-calories-db--parsetypes
+   (--reduce-from (append acc it) nil
+                  (--zip-with (list it other) headers data))))
 
 
 (defun org-calories-db--generate (&optional type)

@@ -141,6 +141,18 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
               :sodium (funcall adder finfo1 finfo2 :sodium))
       ;; return one or the other
       (or finfo1 finfo2))))
+
+(defun org-calories-db--recipes2plist (pin)
+  "Convert a single entry list of PIN to recipes plist."
+  (let ((recipeamt (string-to-number (car pin)))
+        (recipeingrd nil))
+    (dolist (ingredients (split-string (cadr pin) ",,"))
+      (let* ((portfood (split-string ingredients "::"))
+             (food (nth 0 portfood))
+             (port (string-to-number (nth 1 portfood))))
+        (push (list :food food :amount port) recipeingrd)))
+    (list :amount recipeamt :ingredients recipeingrd)))
+
 ;;
 (defun org-calories-entry--recipes-calculate (recipe-info)
   "Calculate the food content of the ingredients given by RECIPE-INFO."
