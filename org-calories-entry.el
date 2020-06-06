@@ -61,11 +61,16 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
 
 (defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."
-  (let* ((result (read-string
-                  (concat "[" fname "] -- kCals and Grams:\n\
-Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
-         (plistinp (org-calories-db--foods2plist (split-string result))))
-    (org-calories-entry--foods-validateentry plistinp)))
+  (let* ((headers (list :amount :unit :kc :fat :carbs :sugars :fibre :protein :sodium))
+         (result (split-string
+                  (read-string
+                   (format "[%s] -- kCals and Grams:\n%s\n" fname
+                           (mapconcat (lambda (x) (string-trim-left
+                                              (format "%-3s" x) ":"))
+                                      headers "\t"))))))
+    (org-calories-db--pairtypes headers result)))
+
+
 
 (defun org-calories-entry-foods-insert (fname &optional plist-info)
   "Insert food FNAME with PLIST-INFO."
@@ -73,9 +78,8 @@ Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
   (if (org-calories-entry--foods-retrieve fname)
       (message "Food '%s' already exists in the food table, not inserting." fname)
     (unless plist-info
-      (let* ((insmeth (read-multiple-choice "Insert method: "
-                                            '((?o "Online Search")
-                                              (?m "Manual Input"))))
+      (let* ((insmeth (read-multiple-choice
+                       "Insert method: " '((?o "Online Search") (?m "Manual Input"))))
              (chosen (car insmeth)))
         (cond ((eq chosen ?o)
                (--> (org-calories-online-search fname)
@@ -87,8 +91,7 @@ Amnt\tUnit\tkcal\tcarbs\t~fibre\t~sugars\tprotein\tfat\tsodium(mg)\n")))
                (setq plist-info (org-calories-entry--foods-newentry fname)))
               (t (user-error "Invalid selection")))))
     ;;
-    (cl-pushnew (cons fname plist-info)
-                org-calories-db--foods :key #'car)
+    (cl-pushnew (cons fname plist-info) org-calories-db--foods :key #'car)
     (org-calories-db--sync 'foods))
   ;; echo out the details in case they were updated
   (cons fname plist-info))
@@ -146,7 +149,8 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
     (dolist (var (plist-get recipe-info :ingredients))
       (let* ((foodname (plist-get var :food))
              (fportion (plist-get var :amount))
-             (foodinfo (org-calories-entry--foods-retrieve foodname))
+             (foodinfo (or (org-calories-entry--foods-retrieve foodname)
+                           (user-error "Count not find: %s" foodname)))
              (foodscal (org-calories-db--scale-item foodinfo fportion)))
         (setq food-total (org-calories-entry--foods-add food-total foodscal))))
     ;; here we add a new field to make it recipe compliant

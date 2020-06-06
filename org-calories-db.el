@@ -63,9 +63,9 @@
 
 (defun org-calories-db--recipes2plist (pin)
   "Convert a single entry list of PIN to recipes plist."
-  (let ((recipeamt (string-to-number (car pin)))
+  (let ((recipeamt (plist-get pin :amount))
         (recipeingrd nil))
-    (dolist (ingredients (split-string (cadr pin) ",,"))
+    (dolist (ingredients (split-string (plist-get pin :ingredients) ",,"))
       (let* ((portfood (split-string ingredients "::"))
              (food (nth 0 portfood))
              (port (string-to-number (nth 1 portfood))))
@@ -133,7 +133,8 @@
                (if (eq nval 0)
                    (if (string= "0" str) 0 str)
                  nval)))))
-         unrefinedlist))
+        unrefinedlist))
+
 
 
 (defun org-calories-db--generate (&optional type)
@@ -145,11 +146,14 @@
     (let ((sstring nil)
           (dbsymbl nil))
       (cond ((eq type 'foods) (setq sstring org-calories-db--str-dbfood
-                                    dbsymbl 'org-calories-db--foods))
+                                    dbsymbl 'org-calories-db--foods
+                                    org-calories-db--foods nil))
             ((eq type 'recipes) (setq sstring org-calories-db--str-dbrecp
-                                      dbsymbl 'org-calories-db--recipes))
+                                      dbsymbl 'org-calories-db--recipes
+                                      org-calories-db--recipes nil))
             ((eq type 'exercises) (setq sstring org-calories-db--str-dbexer
-                                        dbsymbl 'org-calories-db--exercises))
+                                        dbsymbl 'org-calories-db--exercises
+                                        org-calories-db--exercises nil))
             (t (user-error "Database type doesn't exist")))
       ;;
       (if (search-forward sstring nil t)
@@ -181,32 +185,30 @@
     (org-table-align)
     (org-table-goto-column 1)))
 
-(defun org-calories-db--trimandsort ()
-  "Trim table and sort on name."
+(defun org-calories-db--trimandsort (&optional reverse)
+  "Trim table and sort on name, optionally in REVERSE."
   ;; Trim last empty row
   (progn (kill-line 0)(kill-line 1) (insert "\n")(forward-line -2))
   ;; Sort by name
-  (org-table-goto-column 1)
-  (org-table-sort-lines nil ?a))
+  (save-excursion
+    (org-table-goto-column 1)
+    (org-table-sort-lines nil (if reverse ?A ?a))))
 
 (defun org-calories-db--sync (type)
   "Sync db TYPE back to database file."
   (org-calories-db--makeheaders)
   (with-current-buffer (find-file-noselect org-calories-db-file)
-    ;; Parse Tables
-    (save-excursion
+    (save-excursion    ;; Parse Tables
       (goto-char 0)
-      (let ((database nil)
-            (table nil))
+      (let ((database nil) (table nil))
         (cond ((eq type 'foods) (setq sstring org-calories-db--str-dbfood
                                       dbsymbl 'org-calories-db--foods))
               ((eq type 'recipes) (setq sstring org-calories-db--str-dbrecp
                                         dbsymbl 'org-calories-db--recipes))
               ((eq type 'exercises) (setq sstring org-calories-db--str-dbexer
                                           dbsymbl 'org-calories-db--exercises))
-            (t (user-error "Database type doesn't exist")))
-        ;; General
-        (if (search-forward sstring nil t)
+              (t (user-error "Database type doesn't exist")))
+        (if (search-forward sstring nil t)   ;; General
             (when (re-search-forward org-table-line-regexp nil t)
               (unless (symbol-value dbsymbl)
                 (user-error "Database not populated, quitting"))
@@ -216,9 +218,8 @@
                 (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
                 ;; Dump current database
                 (dolist (entry (--map (cons :name it)
-                                      (--sort (car it)
-                                              (symbol-value dbsymbl)))) ;; rows
-                  (dolist (keyw header-order)                  ;; columns
+                                      (--sort (car it) (symbol-value dbsymbl)))) ;; rows
+                  (dolist (keyw header-order)                                    ;; columns
                     (let ((am (plist-get entry keyw)))
                       (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
                   (insert "|\n")))  ;;(org-table-next-field))))

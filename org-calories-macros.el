@@ -42,32 +42,38 @@
         (user-error "Macros table %4d-%02d-Macros not available"
                     myear mmont))
       (forward-line 1)
-      (dolist (line (cddr (org-table-to-lisp)))
+      (dolist (line (cddr (org-table-to-lisp)) marcs)
         (let ((type (intern (format ":%s" (downcase (car line)))))
               (min (string-to-number (nth 1 line)))
               (max (string-to-number (nth 2 line))))
           (setq marcs
                 (plist-put marcs type
-                           (list :min min :max max))))))
-    marcs))
+                           (list :min min :max max))))))))
 ;;
 
+(defun org-calories-macros--summarize (scaled-items)
+  "Summarize the list of SCALED-ITEMS into total nutritients, and calories"
+  (--reduce (+ acc it) (--map (plist-get it :kc) scaled-items)))
+
+
 (defun org-calories-macros--collect (&optional year month day)
-  "Collect macros for YEAR MONTH and DAY."
+  "Collect scaled nutrional values for YEAR MONTH and DAY."
   (org-calories-log--makeheaders)
   (let* ((myear (or year (string-to-number
                           (format-time-string "%Y"))))
          (mmont (or month (string-to-number
                            (format-time-string "%m"))))
+         (mday (or day (string-to-number
+                        (format-time-string "%d"))))
          (tblym (format "#+NAME:%4d-%02d-Logbook" myear mmont))
-         (curdat (format "%4d-%02d-%02d" year month day)))
+         (curdat (format "%4d-%02d-%02d" myear mmont mday)))
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
       (unless (search-forward tblym nil t)
         (user-error "Macros table %4d-%02d-Logbook not available" myear mmont))
       (forward-line 1)
       (let ((list-items nil))
-        (dolist (line (cddr (org-table-to-lisp)))
+        (dolist (line (cddr (org-table-to-lisp)) list-items)
           (let ((timestamp (nth 0 line))
                 (type (intern (downcase (nth 1 line))))
                 (item (nth 2 line))
@@ -92,10 +98,10 @@
                                ((string= type "exercise")
                                 (org-calories-db--scale-item
                                  (org-calories-entry--exercises-retrieve item)
-                                 amount))
+                                 (- amount))) ;; we negate exercise contributions
                                (t (user-error "No such type")))))
-                    (push amount-scaled list-items))))))
-        list-items))))
+                    (push (append (list :type type) amount-scaled)
+                          list-items))))))))))
 
 (provide 'org-calories-macros)
 ;;; org-calories-macros.el ends here
