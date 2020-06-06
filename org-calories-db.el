@@ -162,15 +162,20 @@
                      (header-order (--map (intern it) (car (org-table-to-lisp)))))
                 (dolist (row (cddr table-data))
                   (let* ((paired-data (org-calories-db--parsetypes
-                                      (--reduce-from (append acc it) nil
-                                                     (--zip-with (list it other)
-                                                                 header-order
-                                                                 row))))
+                                       (--reduce-from (append acc it) nil
+                                                      (--zip-with (list it other)
+                                                                  header-order
+                                                                  row))))
                          (data-noname (map-delete paired-data :name)))
                     (cl-pushnew (cons (plist-get paired-data :name) data-noname)
                                 (symbol-value dbsymbl)
-                                :test #'string= :key #'car)))))))))
-
+                                :test #'string= :key #'car)))))))
+    ;; Reprocess recipes
+    (if (eq type 'recipes)
+        (if (eq (type-of (plist-get (cdar org-calories-db--recipes) :ingredients)) 'string)
+          (setq org-calories-db--recipes
+                (--map (cons (car it) (org-calories-db--recipes2plist (cdr it)))
+                       org-calories-db--recipes))))))
 
 
 (defun org-calories-db--kill-table ()
