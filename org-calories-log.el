@@ -139,9 +139,8 @@
                 food-info (cdr newinfo)))))
   ;;
   (let* ((food-info (org-calories-entry--foods-retrieve food))
-         (amount-want (or portion (read-number (message (format
-                                                         "[%s] -- %s\nWhat portion of food (g)? "
-                                                         food food-info)))))
+         (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
+                                                        food food-info))))
          (scaled-food (org-calories-db--scale-item food-info amount-want))
          (scaled-calories (plist-get scaled-food :kc)))
     ;; Currently at table head
