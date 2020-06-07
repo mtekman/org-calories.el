@@ -100,7 +100,7 @@
                                  (org-calories-entry--exercises-retrieve item)
                                  (- amount))) ;; we negate exercise contributions
                                (t (user-error "No such type")))))
-                    (push (append (list :type type) amount-scaled)
+                    (push (append (list :name item :type type) amount-scaled)
                           list-items))))))))))
 
 (provide 'org-calories-macros)
