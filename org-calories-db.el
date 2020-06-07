@@ -230,7 +230,7 @@
                 (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
                 ;; Dump current database
                 (dolist (entry (--map (cons :name it)
-                                      (--sort (car it) (symbol-value dbsymbl)))) ;; rows
+                                      (--sort (string-lessp (car it)(car other)) (symbol-value dbsymbl)))) ;; rows
                   (dolist (keyw header-order)                                    ;; columns
                     (let ((am (plist-get entry keyw)))
                       (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
