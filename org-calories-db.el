@@ -164,13 +164,15 @@
       (if (search-forward sstring nil t)
           (if (re-search-forward org-table-line-regexp nil t)
               (let* ((table-data (org-table-to-lisp))
-                     (header-order (--map (intern it) (car (org-table-to-lisp)))))
+                     (header-order (--map (if (string-prefix-p ":" it) (intern it))
+                                          (car (org-table-to-lisp)))))
                 (dolist (row (cddr table-data))
                   (let* ((paired-data (org-calories-db--parsetypes
                                        (--reduce-from (append acc it) nil
-                                                      (--zip-with (list it other)
-                                                                  header-order
-                                                                  row))))
+                                                      (--filter (car it) ;; discard non-keyword columns
+                                                                (--zip-with (list it other)
+                                                                            header-order
+                                                                            row)))))
                          (data-noname (map-delete paired-data :name)))
                     (cl-pushnew (cons (plist-get paired-data :name) data-noname)
                                 (symbol-value dbsymbl)
