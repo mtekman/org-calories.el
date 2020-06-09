@@ -131,20 +131,20 @@
                           (org-calories-log--completions 'foods))))
   ;; TODO: Override space
   (org-calories-log--prelog)
-  ;; At first empty
-  (unless (org-calories-entry--foods-retrieve food)
-    (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
-        (let ((newinfo (org-calories-entry-foods-insert food)))
-          (setq food (car newinfo)
-                food-info (cdr newinfo)))))
-  ;;
-  (let* ((food-info (org-calories-entry--foods-retrieve food))
-         (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
-                                                        food food-info))))
-         (scaled-food (org-calories-db--scale-item food-info amount-want))
-         (scaled-calories (plist-get scaled-food :kc)))
-    ;; Currently at table head
-    (with-current-buffer (find-file-noselect org-calories-log-file)
+  ;; Currently at table head
+  (with-current-buffer (find-file-noselect org-calories-log-file)
+    ;; At first empty
+    (unless (org-calories-entry--foods-retrieve food)
+      (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
+          (let ((newinfo (org-calories-entry-foods-insert food)))
+            (setq food (car newinfo)
+                  food-info (cdr newinfo)))))
+    ;;
+    (let* ((food-info (org-calories-entry--foods-retrieve food))
+           (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
+                                                          food food-info))))
+           (scaled-food (org-calories-db--scale-item food-info amount-want))
+           (scaled-calories (plist-get scaled-food :kc)))
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'food food amount-want scaled-calories)
       (org-calories-db--trimandsort t)
@@ -155,22 +155,22 @@
   (interactive
    (list (completing-read "Recipe: " (org-calories-log--completions 'recipes))))
   (org-calories-log--prelog)
-  ;;
-  (unless (org-calories-entry--recipes-retrieve recipe)
-    (if (y-or-n-p (format "Recipe '%s' does not exist, insert new? " recipe))
-        (org-calories-entry-recipe-insert recipe)))
-  ;;
-  (let* ((recipe-info (org-calories-entry--recipes-retrieve recipe))
-         (amount-want (or portion (read-number (message (format
-                                                         "[%s] -- %s\nWhat amount of recipe? "
-                                                         recipe recipe-info)))))
-         ;; the above has portion value of -1, but is the total
-         ;; food value of the native portion of that recipe
-         (calced-recipe (org-calories-entry--recipes-calculate recipe-info))
-         (scaled-recipe (org-calories-db--scale-item calced-recipe amount-want))
-         (scaled-calories (plist-get scaled-recipe :kc)))
-    ;; Currently at table head
-    (with-current-buffer (find-file-noselect org-calories-log-file)
+  ;; Currently at table head
+  (with-current-buffer (find-file-noselect org-calories-log-file)
+    ;;
+    (unless (org-calories-entry--recipes-retrieve recipe)
+      (if (y-or-n-p (format "Recipe '%s' does not exist, insert new? " recipe))
+          (org-calories-entry-recipe-insert recipe)))
+    ;;
+    (let* ((recipe-info (org-calories-entry--recipes-retrieve recipe))
+           (amount-want (or portion (read-number (message (format
+                                                           "[%s] -- %s\nWhat amount of recipe? "
+                                                           recipe recipe-info)))))
+           ;; the above has portion value of -1, but is the total
+           ;; food value of the native portion of that recipe
+           (calced-recipe (org-calories-entry--recipes-calculate recipe-info))
+           (scaled-recipe (org-calories-db--scale-item calced-recipe amount-want))
+           (scaled-calories (plist-get scaled-recipe :kc)))
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'recipe recipe amount-want scaled-calories)
       (org-calories-db--trimandsort t)
@@ -182,20 +182,19 @@ The unit does not actually matter because it's set by the database and we are ju
   (interactive
    (list (completing-read "Exercise: " (org-calories-log--completions 'exercises))))
   (org-calories-log--prelog)
-  ;;
-  (unless (org-calories-entry--exercises-retrieve exercise)
-    (if (y-or-n-p (format "Exercise '%s' does not exist, insert new? " exercise))
-        (org-calories-entry-exercise-insert exercise)))
-  ;;
-  (let* ((exercise-info (org-calories-entry--exercises-retrieve exercise))
-         (amount-want (or amount
-                          (read-number (message (format
-                                                 "[%s] -- %s\nWhat amount of exercise? "
-                                                 exercise exercise-info)))))
-         (scaled-exercise (org-calories-db--scale-item exercise-info amount-want))
-         (scaled-calories (plist-get scaled-exercise :kc)))
-    ;; Currently at table head
-    (with-current-buffer (find-file-noselect org-calories-log-file)
+  ;; Currently at table head
+  (with-current-buffer (find-file-noselect org-calories-log-file)
+    (unless (org-calories-entry--exercises-retrieve exercise)
+      (if (y-or-n-p (format "Exercise '%s' does not exist, insert new? " exercise))
+          (org-calories-entry-exercise-insert exercise)))
+    ;;
+    (let* ((exercise-info (org-calories-entry--exercises-retrieve exercise))
+           (amount-want (or amount
+                            (read-number (message (format
+                                                   "[%s] -- %s\nWhat amount of exercise? "
+                                                   exercise exercise-info)))))
+           (scaled-exercise (org-calories-db--scale-item exercise-info amount-want))
+           (scaled-calories (plist-get scaled-exercise :kc)))
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'exercise exercise amount-want
                                 (- scaled-calories)) ;; negative kc

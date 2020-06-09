@@ -55,6 +55,10 @@
   "Summarize the list of SCALED-ITEMS into total nutritients, and calories"
   (--reduce (+ acc it) (--map (plist-get it :kc) scaled-items)))
 
+;; (defun org-calories-macros--summarize2 (scaled-items)
+;;   "Summarize the list of SCALED-ITEMS into total nutritients, and calories"
+;;   (let ((foods (
+;;   (--reduce (+ (plist-get acc :kc) (plist-get it :kc)) scaled-items))
 
 (defun org-calories-macros--collect (&optional year month day)
   "Collect scaled nutrional values for YEAR MONTH and DAY."

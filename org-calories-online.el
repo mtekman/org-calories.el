@@ -47,6 +47,7 @@
          (results-buffer (url-retrieve-synchronously search-url nil t 5)))
     ;; Populate list
     (with-current-buffer results-buffer
+      ;;(write-file "testsearch.txt") ;; debug
       (goto-char 0)
       (while (re-search-forward
               "window.location.href='\\([^']*\\)';\"><div id='acelement.'>\\(.*+?\\)</div>" nil t)

@@ -200,7 +200,7 @@
 (defun org-calories-db--trimandsort (&optional reverse)
   "Trim table and sort on name, optionally in REVERSE."
   ;; Trim last empty row
-  (progn (kill-line 0)(kill-line 1) (insert "\n")(forward-line -2))
+  (org-table-kill-row)
   ;; Sort by name
   (save-excursion
     (org-table-goto-column 1)
