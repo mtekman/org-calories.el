@@ -118,5 +118,23 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                     (push (append (list :date timekey :name item :type type) amount-scaled)
                           list-items))))))))))
 
+
+(defun org-calories-macros--tableretrieve (year month)
+  "Retrieve data from YEAR MONTH Dailies table."
+  (org-calories-log--makeheaders)
+  (let ((tabdata nil))
+    (with-current-buffer (find-file-noselect org-calories-log-file)
+      (if (search-forward (format "#+NAME:%4d-%02d-Dailies" year month) nil t)
+          (let* ((table-data (org-table-to-lisp))
+                 (header-order (--map (if (string-prefix-p ":" it) (intern it))
+                                      (car (org-table-to-lisp)))))
+            (dolist (row (cddr table-data) tabdata)
+              (let ((paired-data (org-calories-db--parsetypes
+                                  (--reduce-from (append acc it) nil
+                                                 (--filter (car it) ;; discard non-keyword columns
+                                                           (--zip-with (list it other)
+                                                                       header-order
+                                                                       row))))))
+                (push paired-data tabdata))))))))
 (provide 'org-calories-macros)
 ;;; org-calories-macros.el ends here
