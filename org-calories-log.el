@@ -43,13 +43,13 @@
 (defconst org-calories-log-str-targets "*** Targets / Macros")
 (defconst org-calories-log-hed-targets "| Dailies | Min | Max |")
 (defconst org-calories-log-str-daylogs "*** Logs")
-(defconst org-calories-log-hed-daylogs "| Timestamp | Type | Item | Amount | Calories(kC) |")
 
 (defun org-calories-log--makeheaders ()
   "Make table headers."
   (let ((hed-year (format-time-string "* %Y"))
         (hed-month (format-time-string "** %m - %b"))
-        (tbl-logs (format-time-string "%Y-%m-Logbook")))
+        (tbl-logs (format-time-string "%Y-%m-Logbook"))
+        (tbl-dail (format-time-string "%Y-%m-Dailies")))
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (save-excursion
         (goto-char 0)
@@ -105,12 +105,6 @@
   (insert (format (if (floatp calories) "%.2f" "%d") calories))
   (org-table-next-field))
 
-;; (defun org-calories-log--prelog1 (type name)
-;;   "Preamble for importing NAME of TYPE, and finding the right table."
-;;   (unless (org-calories-entry--foods-retrieve name)
-;;     (if (y-or-n-p (format "Food '%s' does not exist, insert new? " name))
-;;         (org-calories-entry-foods-insert name))))
-
 
 (defun org-calories-log--prelog ()
   "Preamble for importing NAME of TYPE, and finding the right table."
@@ -149,6 +143,7 @@
       (org-calories-log--insert 'food food amount-want scaled-calories)
       (org-calories-db--trimandsort t)
       (save-buffer))))
+
 
 (defun org-calories-log-recipe (recipe &optional portion)
   "Log RECIPE entry with optional PORTION."

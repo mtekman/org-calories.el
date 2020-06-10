@@ -40,11 +40,8 @@
 
 (defconst org-calories-db--str-titled "#+TITLE: Database of Foods, Recipes, and Exercises")
 (defconst org-calories-db--str-dbfood "* Individual Foods")
-(defconst org-calories-db--hed-dbfood "| Name | Amount | Unit | kCal | Carbs(g) | ofFibre(g) | ofSugars(g) | Protein(g) | Fat(g) | Sodium (mg) |")
 (defconst org-calories-db--str-dbrecp "* Recipes")
-(defconst org-calories-db--hed-dbrecp "| Name | Amount | Ingredients (Food::Amount[,,] |") ;; variable length nested list
 (defconst org-calories-db--str-dbexer "* Exercises")
-(defconst org-calories-db--hed-dbexer "| Name | Amount | Unit | kCal |")
 
 (defsubst org-calories-db--s2n (num pin)
   "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
@@ -58,7 +55,8 @@
     (dolist (var (reverse plist-info) newplist)
       (if (numberp var)
           (push (round (/ (float var) scalefractn)) newplist)
-        (push var newplist))))) ;; keywords or strings
+        ;; keywords or strings
+        (push var newplist)))))
 
 
 (defun org-calories-db--recipes2plist (pin)
@@ -85,10 +83,12 @@
 
 (defun org-calories-db--maketable (section title header)
   "Insert table with SECTION, TITLE, and HEADER."
-  (insert (format "\n\n%s\n\n" section))
-  (insert (format "#+NAME:%s" title))
+  (if section
+      (insert (format "\n\n%s\n\n" section)))
   (org-cycle)
-  (insert (format "\n%s" header))
+  (insert (format "#+NAME:%s\n" title))
+  (org-cycle)
+  (insert (format "%s" header))
   (org-table-insert-hline)
   (forward-char 1)
   (org-table-insert-row -1)
@@ -109,18 +109,21 @@
             (progn (beginning-of-line)
                    (forward-line -1))
           (goto-char (point-max)))
-      (org-calories-db--maketable org-calories-db--str-dbfood "Food" org-calories-db--hed-dbfood))
+      (org-calories-db--maketable org-calories-db--str-dbfood "Food"
+                                  "| :name | :amount | :unit | :kc | :fat | :carbs | :sugars | :fibre | :protein | :sodium |"))
     ;; Make Recipe, vor Exercises
     (if (search-forward org-calories-db--str-dbrecp nil t)
         (if (search-forward org-calories-db--str-dbexer nil t)
             (progn (beginning-of-line)
                    (forward-line -1))
           (goto-char (point-max)))
-      (org-calories-db--maketable org-calories-db--str-dbrecp "Recipe" org-calories-db--hed-dbrecp))
+      (org-calories-db--maketable org-calories-db--str-dbrecp "Recipe"
+                                  "| :name | :amount | :ingredients | Notes |"))
     ;; Exercises, nach alles
     (if (search-forward org-calories-db--str-dbexer nil t)
         (goto-char (point-max))
-      (org-calories-db--maketable org-calories-db--str-dbexer "Exercise" org-calories-db--hed-dbexer))))
+      (org-calories-db--maketable org-calories-db--str-dbexer "Exercise"
+                                  "| :name | :amount | :unit | :kc |"))))
 
 (defun org-calories-db--parsetypes (unrefinedlist)
   "Change UNREFINEDLIST of strings into keywords and numbers where possible."

@@ -31,16 +31,16 @@
   "Get daily target macros for YEAR and MONTH."
   (org-calories-log--makeheaders)
   (let* ((marcs nil)
-         (myear (or year (string-to-number
-                          (format-time-string "%Y"))))
-         (mmont (or month (string-to-number
+         (year (or year (string-to-number
+                         (format-time-string "%Y"))))
+         (month (or month (string-to-number
                            (format-time-string "%m"))))
-         (tblym (format "#+NAME:%4d-%02d-Macros" myear mmont)))
+         (tblym (format "#+NAME:%4d-%02d-Macros" year month)))
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
       (unless (search-forward tblym nil t)
         (user-error "Macros table %4d-%02d-Macros not available"
-                    myear mmont))
+                    year month))
       (forward-line 1)
       (dolist (line (cddr (org-table-to-lisp)) marcs)
         (let ((type (intern (format ":%s" (downcase (car line)))))
