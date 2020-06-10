@@ -51,30 +51,41 @@
                            (list :min min :max max))))))))
 ;;
 
-(defun org-calories-macros--summarize (scaled-items)
-  "Summarize the list of SCALED-ITEMS into total nutritients, and calories"
-  (--reduce (+ acc it) (--map (plist-get it :kc) scaled-items)))
+(defun org-calories-macros--summarize (scaled-items &optional groupday)
+  "Summarize the list of SCALED-ITEMS into total nutritients, and calories.
+If GROUPDAY, then summarize by day."
+  (let ((summary nil)
+        (daylist (if groupday (--map (plist-get it :date) scaled-items))))
+    (dolist (day daylist summary)
+      (let* ((scaled-item-day (--filter (string= (plist-get it :date) day) scaled-items))
+             (foods (--filter (eq (plist-get it :type) 'food) scaled-items-day))
+             (recipes (--filter (eq (plist-get it :type) 'recipe) scaled-items-day))
+             (exercises (--filter (eq (plist-get it :type) 'exercise) scaled-items-day)))
+        (let* ((flatten-foods (--reduce (org-calories-entry--foods-add acc it)
+                                        (append foods recipes)))
+               (_flatexers (--reduce (+ acc it)
+                                     (if exercises
+                                         (--map (plist-get it :kc) exercises)
+                                       '(0))))
+               (flatten-exers (unless (eq _flatexers 0) (list :exercise _flatexers))))
+          (push (cons day (append flatten-foods flatten-exers)) summary))))))
 
-;; (defun org-calories-macros--summarize2 (scaled-items)
-;;   "Summarize the list of SCALED-ITEMS into total nutritients, and calories"
-;;   (let ((foods (
-;;   (--reduce (+ (plist-get acc :kc) (plist-get it :kc)) scaled-items))
 
 (defun org-calories-macros--collect (&optional year month day)
-  "Collect scaled nutrional values for YEAR MONTH and DAY."
+  "Collect scaled nutrional values for YEAR MONTH and DAY.
+If DAY is t, then it collects the entire month.  If nil it collects the current day."
   (org-calories-log--makeheaders)
-  (let* ((myear (or year (string-to-number
-                          (format-time-string "%Y"))))
-         (mmont (or month (string-to-number
-                           (format-time-string "%m"))))
-         (mday (or day (string-to-number
-                        (format-time-string "%d"))))
-         (tblym (format "#+NAME:%4d-%02d-Logbook" myear mmont))
-         (curdat (format "%4d-%02d-%02d" myear mmont mday)))
+  (let* ((year (or year (string-to-number (format-time-string "%Y"))))
+         (month (or month (string-to-number (format-time-string "%m"))))
+         (day (or day (string-to-number (format-time-string "%d"))))
+         (tblym (format "#+NAME:%4d-%02d-Logbook" year month))
+         (timepref (if (eq day t)
+                       (format "%4d-%02d" year month)  ;; entire month
+                     (format "%4d-%02d-%02d" year month day))))
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
       (unless (search-forward tblym nil t)
-        (user-error "Macros table %4d-%02d-Logbook not available" myear mmont))
+        (user-error "Macros table %4d-%02d-Logbook not available" year month))
       (forward-line 1)
       (let ((list-items nil))
         (dolist (line (cddr (org-table-to-lisp)) list-items)
@@ -88,7 +99,7 @@
                                     (plist-get timedata :year-start)
                                     (plist-get timedata :month-start)
                                     (plist-get timedata :day-start))))
-              (if (string= timekey curdat)
+              (if (string-prefix-p timepref timekey)
                   (let ((amount-scaled
                          (cond ((string= type "food")
                                 (org-calories-db--scale-item
@@ -102,9 +113,9 @@
                                ((string= type "exercise")
                                 (org-calories-db--scale-item
                                  (org-calories-entry--exercises-retrieve item)
-                                 (- amount))) ;; we negate exercise contributions
+                                 amount))
                                (t (user-error "No such type")))))
-                    (push (append (list :name item :type type) amount-scaled)
+                    (push (append (list :date timekey :name item :type type) amount-scaled)
                           list-items))))))))))
 
 (provide 'org-calories-macros)

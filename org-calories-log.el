@@ -60,16 +60,19 @@
         ;; Search for Macros
         (unless (search-forward "* Macros" nil t)
           (org-calories-db--maketable "* Macros" "Macros"
-                                      "| Timestamp | kCal | Carbs | Fibre | Sugars | Protein | Fat | Exercise | Water |"))
-        ;; Search for Year
-        (if (search-forward hed-year nil t)
-            (unless (search-forward hed-month nil t)
-              ;; insert month and table
-              (org-calories-db--maketable org-calories-log-str-daylogs tbl-logs org-calories-log-hed-daylogs))
-          ;; otherwise insert year and month at end of buffer
-          (goto-char (point-max))
-          (insert (format "\n%s\n" hed-year))
-          (org-calories-db--maketable org-calories-log-str-daylogs tbl-logs org-calories-log-hed-daylogs))))))
+                                      "| :timestamp | :kc | :fat | :carbs | :sugars | :fibre | :protein | :exercise | :water |"))
+        ;; Search for Year, Month
+        (unless (search-forward hed-year nil t)
+          (insert (format "\n%s\n" hed-year)))
+        (unless (search-forward hed-month nil t)
+          (insert (format "\n%s\n" hed-month)))
+        ;; Search for tables
+        (unless (search-forward (concat "#+NAME:" tbl-dail) nil t)
+          (insert "\n\n")
+          (org-calories-db--maketable nil tbl-dail "| :timestamp | :kc | :fat | :carbs | :sugars | :fibre | :protein | :sodium | :exercise | :water |"))
+        (unless (search-forward (concat "#+NAME:" tbl-logs) nil t)
+          (insert "\n\n")
+          (org-calories-db--maketable nil tbl-dail "| :timestamp | :type | :item | :amount | ~KC |"))))))
 
 (defun org-calories-log--completions (type)
   "Produce completion keys for TYPE."
