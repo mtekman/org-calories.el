@@ -85,40 +85,42 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                        (format "%4d-%02d" year month)  ;; entire month
                      (format "%4d-%02d-%02d" year month day))))
     (with-current-buffer (find-file-noselect org-calories-log-file)
-      (goto-char 0)
-      (unless (search-forward tblym nil t)
-        (user-error "Macros table %4d-%02d-Logbook not available" year month))
-      (forward-line 1)
-      (let ((list-items nil))
-        (dolist (line (cddr (org-table-to-lisp)) list-items)
-          (let ((timestamp (nth 0 line))
-                (type (intern (downcase (nth 1 line))))
-                (item (nth 2 line))
-                (amount (string-to-number (nth 3 line))))
-            ;;(kc (string-to-number (nth 4 line))))
-            (let* ((timedata (cadr (org-timestamp-from-string timestamp)))
-                   (timekey (format "%4d-%02d-%02d"
-                                    (plist-get timedata :year-start)
-                                    (plist-get timedata :month-start)
-                                    (plist-get timedata :day-start))))
-              (if (string-prefix-p timepref timekey)
-                  (let ((amount-scaled
-                         (cond ((string= type "food")
-                                (org-calories-db--scale-item
-                                 (org-calories-entry--foods-retrieve item)
-                                 amount))
-                               ((string= type "recipe")
-                                (org-calories-db--scale-item
-                                 (org-calories-entry--recipes-calculate
-                                  (org-calories-entry--recipes-retrieve item))
-                                 amount))
-                               ((string= type "exercise")
-                                (org-calories-db--scale-item
-                                 (org-calories-entry--exercises-retrieve item)
-                                 amount))
-                               (t (user-error "No such type")))))
-                    (push (append (list :date timekey :name item :type type) amount-scaled)
-                          list-items))))))))))
+      (save-excursion
+        (goto-char 0)
+        (unless (search-forward tblym nil t)
+          (user-error "Macros table %4d-%02d-Logbook not available" year month))
+        (forward-line 1)
+        (let ((list-items nil))
+          (dolist (line (cddr (org-table-to-lisp)) list-items)
+            (let ((timestamp (nth 0 line))
+                  (type (intern (downcase (nth 1 line))))
+                  (item (nth 2 line))
+                  (amount (string-to-number (nth 3 line))))
+              ;;(kc (string-to-number (nth 4 line))))
+              (let* ((timedata (cadr (org-timestamp-from-string timestamp)))
+                     (timekey (format "%4d-%02d-%02d"
+                                      (plist-get timedata :year-start)
+                                      (plist-get timedata :month-start)
+                                      (plist-get timedata :day-start)))
+                     (timestamp (format "<%s>" timekey)))
+                (if (string-prefix-p timepref timekey)
+                    (let ((amount-scaled
+                           (cond ((string= type "food")
+                                  (org-calories-db--scale-item
+                                   (org-calories-entry--foods-retrieve item)
+                                   amount))
+                                 ((string= type "recipe")
+                                  (org-calories-db--scale-item
+                                   (org-calories-entry--recipes-calculate
+                                    (org-calories-entry--recipes-retrieve item))
+                                   amount))
+                                 ((string= type "exercise")
+                                  (org-calories-db--scale-item
+                                   (org-calories-entry--exercises-retrieve item)
+                                   amount))
+                                 (t (user-error "No such type")))))
+                      (push (append (list :date timestamp :name item :type type) amount-scaled)
+                            list-items)))))))))))
 
 
 (defun org-calories-macros--tableretrieve (year month)
