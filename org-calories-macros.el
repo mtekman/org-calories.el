@@ -55,9 +55,11 @@
   "Summarize the list of SCALED-ITEMS into total nutritients, and calories.
 If GROUPDAY, then summarize by day."
   (let ((summary nil)
-        (daylist (if groupday (--map (plist-get it :date) scaled-items))))
-    (dolist (day daylist summary)
-      (let* ((scaled-item-day (--filter (string= (plist-get it :date) day) scaled-items))
+        (daylist (-uniq (--map (plist-get it :date) scaled-items))))
+    (dolist (day daylist summary) ;; always return a list of lists
+      (let* ((scaled-items-day (--filter (or (not day)
+                                             (string= (plist-get it :date) day))
+                                         scaled-items))
              (foods (--filter (eq (plist-get it :type) 'food) scaled-items-day))
              (recipes (--filter (eq (plist-get it :type) 'recipe) scaled-items-day))
              (exercises (--filter (eq (plist-get it :type) 'exercise) scaled-items-day)))
@@ -68,7 +70,7 @@ If GROUPDAY, then summarize by day."
                                          (--map (plist-get it :kc) exercises)
                                        '(0))))
                (flatten-exers (unless (eq _flatexers 0) (list :exercise _flatexers))))
-          (push (cons day (append flatten-foods flatten-exers)) summary))))))
+          (push (append (list :date day) flatten-foods flatten-exers) summary))))))
 
 
 (defun org-calories-macros--collect (&optional year month day)
