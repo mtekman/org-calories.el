@@ -136,5 +136,54 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                                                                        header-order
                                                                        row))))))
                 (push paired-data tabdata))))))))
+
+
+;; (defun org-calories-macros--tableupdate (year month &optional day)
+;;   "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
+;;   (org-calories-log--makeheaders)
+;;   (let ((year (or year (string-to-number (format-time-string "%Y"))))
+;;         (month (or month (string-to-number (format-time-string "%m"))))
+;;         (day (or day (string-to-number (format-time-string "%d")))))
+;;     (with-current-buffer (find-file-noselect org-calories-log-file)
+;;       (if (search-forward (format "#+NAME:%4d-%02d-Dailies" year month) nil t)
+;;           (let ((header-order (--map (intern it) (car (org-table-to-lisp)))))
+;;             (org-calories-db--kill-table)
+;;             (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
+;;             ;; Dump current database
+;;             ;; TODO: FIX THIS
+;;             (dolist (entry
+;;                      (--map (cons :name it)
+;;                             (--sort ;; Need to get date.
+;;                      (org-calories-macros--collect year month day)
+
+;;                      (--map (cons :name it)
+;;                                   (--sort (string-lessp (car it)(car other)) (symbol-value dbsymbl)))) ;; rows
+;;               (dolist (keyw header-order)                                    ;; columns
+;;                 (let ((am (plist-get entry keyw)))
+;;                   (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
+;;               (insert "|\n")))  ;;(org-table-next-field))))
+;;         (when (re-search-backward org-table-line-regexp nil t)
+;;           (org-table-align))))))
+
+
+
+;;     (unless (org-calories-entry--foods-retrieve food)
+;;       (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
+;;           (let ((newinfo (org-calories-entry-foods-insert food)))
+;;             (setq food (car newinfo)
+;;                   food-info (cdr newinfo)))))
+;;     ;;
+;;     (let* ((food-info (org-calories-entry--foods-retrieve food))
+;;            (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
+;;                                                           food food-info))))
+;;            (scaled-food (org-calories-db--scale-item food-info amount-want))
+;;            (scaled-calories (plist-get scaled-food :kc)))
+;;       (org-calories-log--goto-tableend)
+;;       (org-calories-log--insert 'food food amount-want scaled-calories)
+;;       (org-calories-db--trimandsort t)
+;;       (save-buffer))))
+
+
+
 (provide 'org-calories-macros)
 ;;; org-calories-macros.el ends here

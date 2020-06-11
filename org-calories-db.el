@@ -39,7 +39,7 @@
 (defvar org-calories-db--exercises nil)
 
 (defconst org-calories-db--str-titled "#+TITLE: Database of Foods, Recipes, and Exercises")
-(defconst org-calories-db--str-dbfood "* Individual Foods")
+(defconst org-calories-db--str-dbfood "* Foods")
 (defconst org-calories-db--str-dbrecp "* Recipes")
 (defconst org-calories-db--str-dbexer "* Exercises")
 

@@ -200,5 +200,11 @@ The unit does not actually matter because it's set by the database and we are ju
       (save-buffer))))
 
 
+;;TODO:
+(defun org-calories-log-water (amount))
+(defun org-calories-log-weight (amount))
+  
+
+
 (provide 'org-calories-log)
 ;;; org-calories-log.el ends here
