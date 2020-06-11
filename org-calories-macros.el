@@ -142,32 +142,38 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                 (push paired-data tabdata))))))))
 
 
-;; (defun org-calories-macros--tableupdate (year month &optional day)
-;;   "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
-;;   (org-calories-log--makeheaders)
-;;   (let ((year (or year (string-to-number (format-time-string "%Y"))))
-;;         (month (or month (string-to-number (format-time-string "%m"))))
-;;         (day (or day (string-to-number (format-time-string "%d")))))
-;;     (with-current-buffer (find-file-noselect org-calories-log-file)
-;;       (if (search-forward (format "#+NAME:%4d-%02d-Dailies" year month) nil t)
-;;           (let ((header-order (--map (intern it) (car (org-table-to-lisp)))))
-;;             (org-calories-db--kill-table)
-;;             (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
-;;             ;; Dump current database
-;;             ;; TODO: FIX THIS
-;;             (dolist (entry
-;;                      (--map (cons :name it)
-;;                             (--sort ;; Need to get date.
-;;                      (org-calories-macros--collect year month day)
 
-;;                      (--map (cons :name it)
-;;                                   (--sort (string-lessp (car it)(car other)) (symbol-value dbsymbl)))) ;; rows
-;;               (dolist (keyw header-order)                                    ;; columns
-;;                 (let ((am (plist-get entry keyw)))
-;;                   (insert (format (if (floatp am) "| %.1f " "| %s ") am))))
-;;               (insert "|\n")))  ;;(org-table-next-field))))
-;;         (when (re-search-backward org-table-line-regexp nil t)
-;;           (org-table-align))))))
+(defun org-calories-macros--tableupdate (year month &optional day)
+  "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
+  (org-calories-log--makeheaders)
+  (let ((year (or year (string-to-number (format-time-string "%Y"))))
+        (month (or month (string-to-number (format-time-string "%m"))))
+        (day (or day (string-to-number (format-time-string "%d")))))
+    (with-current-buffer (find-file-noselect org-calories-log-file)
+      (goto-char 0)
+      (when (search-forward (format "#+NAME:%4d-%02d-Dailies" year month) nil t)
+        (forward-line 1)
+        (let ((header-order (--map (intern it) (car (org-table-to-lisp))))
+              (daylist (org-calories-macros--summarize
+                        (org-calories-macros--collect year month day))))
+          (org-calories-db--kill-table)
+          (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
+          ;; Process rows
+          (dolist (entry daylist)
+            (dolist (keyw header-order)
+              (let* ((am (plist-get entry keyw))
+                     (am (or am "-")))
+                (insert (format (if (floatp am) "| %.1f " "| %s ") am))
+                (when (eq keyw :date)
+                  (forward-whitespace -1)
+                  (forward-char -1)
+                  (org-timestamp-up-day)
+                  (org-timestamp-down-day)
+                  (forward-char 1)
+                  (forward-whitespace 1))))
+            (insert "|\n")))
+        (if (re-search-backward org-table-line-regexp nil t)
+            (org-table-align))))))
 
 
 
