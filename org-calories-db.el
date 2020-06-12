@@ -203,11 +203,17 @@
 (defun org-calories-db--trimandsort (&optional reverse)
   "Trim table and sort on name, optionally in REVERSE."
   ;; Trim last empty row
-  (org-table-kill-row)
   ;; Sort by name
   (save-excursion
+    (goto-char (org-table-end))
+    (forward-line -1)
     (org-table-goto-column 1)
-    (org-table-sort-lines nil (if reverse ?A ?a))))
+    (org-table-kill-row)
+    (org-table-sort-lines nil (if reverse ?A ?a))
+    ;;
+    (goto-char (org-table-end))
+    (insert "\n"))) ;; preserve spacing
+
 
 (defun org-calories-db--sync (type)
   "Sync db TYPE back to database file."
