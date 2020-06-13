@@ -44,6 +44,9 @@
 (defconst org-calories-log-hed-targets "| Dailies | Min | Max |")
 (defconst org-calories-log-str-daylogs "*** Logs")
 
+(defcustom org-calories-log-showsummary t
+  "Show a summary after logging.")
+
 (defun org-calories-log--makeheaders ()
   "Make table headers."
   (let ((hed-year (format-time-string "* %Y"))
@@ -120,12 +123,18 @@
         (user-error "Could not find table %s.  Please check your logbook"
                     tbl-logs)))))
 
+(defun org-calories-log-runfinish ()
+  "Run log finish functions."
+  (message nil)
+  (save-buffer)
+  (if org-calories-log-showsummary
+      (message "%s" (cddar (org-calories-macros--summarize
+                            (org-calories-macros--collect))))))
 
 (defun org-calories-log-food (food &optional portion)
   "Log FOOD entry with PORTION."
   (interactive
-   (list (completing-read "Food: "
-                          (org-calories-log--completions 'foods))))
+   (list (completing-read "Food: " (org-calories-log--completions 'foods))))
   ;; TODO: Override space
   (org-calories-log--prelog)
   ;; Currently at table head
@@ -145,7 +154,7 @@
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'food food amount-want scaled-calories)
       (org-calories-db--trimandsort t)
-      (save-buffer))))
+      (org-calories-log-runfinish))))
 
 
 (defun org-calories-log-recipe (recipe &optional portion)
@@ -172,7 +181,7 @@
       (org-calories-log--goto-tableend)
       (org-calories-log--insert 'recipe recipe amount-want scaled-calories)
       (org-calories-db--trimandsort t)
-      (save-buffer))))
+      (org-calories-log-runfinish))))
 
 (defun org-calories-log-exercise (exercise &optional amount)
   "Log EXERCISE entry with optional AMOUNT.
@@ -197,7 +206,7 @@ The unit does not actually matter because it's set by the database and we are ju
       (org-calories-log--insert 'exercise exercise amount-want
                                 (- scaled-calories)) ;; negative kc
       (org-calories-db--trimandsort t)
-      (save-buffer))))
+      (org-calories-log-runfinish))))
 
 
 ;;TODO:
