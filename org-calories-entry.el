@@ -190,5 +190,10 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
 ;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :amount 30) (:food "fruit2" :amount 120) (:food "fruit3" :amount 50)))
 ;; (org-calories-entry--recipes-retrieve "fruit salad")
 
+;; (defalias 'org-calories-insert-food 'org-calories-entry-foods-insert)
+;; (defalias 'org-calories-insert-exercise 'org-calories-entry-exercises-insert)
+;; (defalias 'org-calories-insert-recipe 'org-calories-entry-recipes-insert)
+
+
 (provide 'org-calories-entry)
 ;;; org-calories-entry.el ends here

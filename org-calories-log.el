@@ -30,7 +30,7 @@
 (require 'org-calories-db)
 (require 'org-calories-entry)
 
-(defcustom org-calories-log-file "~/repos/_mtekman/myorg/gtd/logbook.org"
+(defcustom org-calories-log-file nil
   "Location of daily logging file."
   :group 'org-calories
   :type 'string)
@@ -154,10 +154,11 @@
                                                             food food-info))))
              (scaled-food (org-calories-db--scale-item food-info amount-want))
              (scaled-calories (plist-get scaled-food :kc)))
-        (org-calories-log--goto-tableend)
-        (org-calories-log--insert 'food food amount-want scaled-calories)
-        (org-calories-db--trimandsort t)
-        (org-calories-log-runfinish)))))
+        (save-excursion
+          (org-calories-log--goto-tableend)
+          (org-calories-log--insert 'food food amount-want scaled-calories)
+          (org-calories-db--trimandsort t)
+          (org-calories-log-runfinish))))))
 
 
 (defun org-calories-log-recipe (recipe &optional portion)
@@ -214,8 +215,10 @@ The unit does not actually matter because it's set by the database and we are ju
 
 ;;TODO:
 (defun org-calories-log-water (amount)
+  "Log water AMOUNT."
   (ignore amount))
 (defun org-calories-log-weight (amount)
+  "Log weight AMOUNT."
   (ignore amount))
 
 

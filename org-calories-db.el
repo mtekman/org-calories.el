@@ -30,7 +30,7 @@
 (require 'dash)
 (require 'map)
 
-(defcustom org-calories-db-file "~/repos/_mtekman/myorg/gtd/database.org"
+(defcustom org-calories-db-file nil
   "Location of database file."
   :group 'org-calories
   :type 'string)

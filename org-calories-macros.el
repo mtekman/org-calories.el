@@ -55,7 +55,6 @@
           daily)))))
 
 
-
 (defun org-calories-macros--summarize (scaled-items &optional groupday)
   "Summarize the list of SCALED-ITEMS into total nutritients, and calories.
 If GROUPDAY, then summarize by day."
