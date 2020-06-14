@@ -28,6 +28,7 @@
 (require 'org-table)
 (require 'subr-x)
 (require 'dash)
+(require 'map)
 
 (defcustom org-calories-db-file "~/repos/_mtekman/myorg/gtd/database.org"
   "Location of database file."
@@ -69,7 +70,6 @@
              (port (string-to-number (nth 1 portfood))))
         (push (list :food food :amount port) recipeingrd)))
     (list :amount recipeamt :ingredients recipeingrd)))
-
 
 (defun org-calories-db--exercises2plist (pin)
   "Convert a single entry list of PIN to exercise plist."
@@ -130,12 +130,12 @@
   (-map (lambda (str)
           (if (keywordp str) str
             (if (string-prefix-p ":" str) (intern str)
-             ;; string to number if possible
-             (let ((nval (string-to-number str)))
-               ;; 0 is the default convert value
-               (if (eq nval 0)
-                   (if (string= "0" str) 0 str)
-                 nval)))))
+              ;; string to number if possible
+              (let ((nval (string-to-number str)))
+                ;; 0 is the default convert value
+                (if (eq nval 0)
+                    (if (string= "0" str) 0 str)
+                  nval)))))
         unrefinedlist))
 
 (defun org-calories-db--pairtypes (headers data)
@@ -183,9 +183,9 @@
     ;; Reprocess recipes
     (if (eq type 'recipes)
         (if (eq (type-of (plist-get (cdar org-calories-db--recipes) :ingredients)) 'string)
-          (setq org-calories-db--recipes
-                (--map (cons (car it) (org-calories-db--recipes2plist (cdr it)))
-                       org-calories-db--recipes))))))
+            (setq org-calories-db--recipes
+                  (--map (cons (car it) (org-calories-db--recipes2plist (cdr it)))
+                         org-calories-db--recipes))))))
 
 
 (defun org-calories-db--kill-table ()
@@ -221,7 +221,8 @@
   (with-current-buffer (find-file-noselect org-calories-db-file)
     (save-excursion    ;; Parse Tables
       (goto-char 0)
-      (let ((database nil) (table nil))
+      (let ((sstring nil)
+            (dbsymbl nil))
         (cond ((eq type 'foods) (setq sstring org-calories-db--str-dbfood
                                       dbsymbl 'org-calories-db--foods))
               ((eq type 'recipes) (setq sstring org-calories-db--str-dbrecp

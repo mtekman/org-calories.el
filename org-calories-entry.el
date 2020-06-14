@@ -26,6 +26,7 @@
 
 ;;; Code:
 (require 'org-calories-db)
+(require 'org-calories-online)
 
 (defun org-calories-entry--foods-validateentry (pentry)
   "Checking the contents of PENTRY."
@@ -65,8 +66,9 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
          (result (split-string
                   (read-string
                    (format "[%s] -- kCals and Grams:\n%s\n" fname
-                           (mapconcat (lambda (x) (string-trim-left
-                                              (format "%-3s" x) ":"))
+                           (mapconcat (lambda (x)
+                                        (string-trim-left
+                                         (format "%-3s" x) ":"))
                                       headers "\t"))))))
     (org-calories-db--pairtypes headers result)))
 
@@ -142,18 +144,7 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
       ;; return one or the other
       (or finfo1 finfo2))))
 
-(defun org-calories-db--recipes2plist (pin)
-  "Convert a single entry list of PIN to recipes plist."
-  (let ((recipeamt (string-to-number (car pin)))
-        (recipeingrd nil))
-    (dolist (ingredients (split-string (cadr pin) ",,"))
-      (let* ((portfood (split-string ingredients "::"))
-             (food (nth 0 portfood))
-             (port (string-to-number (nth 1 portfood))))
-        (push (list :food food :amount port) recipeingrd)))
-    (list :amount recipeamt :ingredients recipeingrd)))
 
-;;
 (defun org-calories-entry--recipes-calculate (recipe-info)
   "Calculate the food content of the ingredients given by RECIPE-INFO."
   (let ((amount-native (plist-get recipe-info :amount))

@@ -27,33 +27,39 @@
 ;;; Code:
 (require 'org-calories-log)
 
-(defun org-calories-macros--get (&optional year month)
-  "Get daily target macros for YEAR and MONTH."
+(defun org-calories-macros--get ()
+  "Get latest target macros."
   (org-calories-log--makeheaders)
-  (let* ((marcs nil)
-         (year (or year (string-to-number
-                         (format-time-string "%Y"))))
-         (month (or month (string-to-number
-                           (format-time-string "%m"))))
-         (tblym (format "#+NAME:%4d-%02d-Macros" year month)))
+  (let ((marcs nil)
+        (tblym "#+NAME:Macros")
+        (latest (lambda (data type)
+                  (--reduce
+                   (< (car (org-read-date nil t (plist-get acc :timestamp)))
+                      (car (org-read-date nil t (plist-get it :timestamp))))
+                   (--filter (string= type (plist-get it :type)) data)))))
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
       (unless (search-forward tblym nil t)
-        (user-error "Macros table %4d-%02d-Macros not available"
-                    year month))
+        (user-error "Macros table not available"))
       (forward-line 1)
-      (dolist (line (cddr (org-table-to-lisp)) marcs)
-        (let ((type (intern (format ":%s" (downcase (car line)))))
-              (min (string-to-number (nth 1 line)))
-              (max (string-to-number (nth 2 line))))
-          (setq marcs
-                (plist-put marcs type
-                           (list :min min :max max))))))))
-;;
+      (let* ((tabledata (org-table-to-lisp))
+             (header (car tabledata))
+             (tdata (cddr tabledata)))
+        (dolist (line tdata marcs)
+          (let ((ldata (org-calories-db--pairtypes header line)))
+            (push ldata marcs)))
+        ;; Filter for latest daily and weekly
+        (let ((daily (funcall latest marcs "Daily"))
+              (weekly (funcall latest marcs "Weekly")))
+          (ignore weekly)
+          daily)))))
+
+
 
 (defun org-calories-macros--summarize (scaled-items &optional groupday)
   "Summarize the list of SCALED-ITEMS into total nutritients, and calories.
 If GROUPDAY, then summarize by day."
+  (ignore groupday)
   (let ((summary nil)
         (daylist (-uniq (--map (plist-get it :date) scaled-items))))
     (dolist (day daylist summary) ;; always return a list of lists
@@ -65,11 +71,11 @@ If GROUPDAY, then summarize by day."
              (exercises (--filter (eq (plist-get it :type) 'exercise) scaled-items-day)))
         (let* ((flatten-foods (--reduce (org-calories-entry--foods-add acc it)
                                         (append foods recipes)))
-               (_flatexers (--reduce (+ acc it)
-                                     (if exercises
-                                         (--map (plist-get it :kc) exercises)
-                                       '(0))))
-               (flatten-exers (unless (eq _flatexers 0) (list :exercise _flatexers))))
+               (flatexers (--reduce (+ acc it)
+                                    (if exercises
+                                        (--map (plist-get it :kc) exercises)
+                                      '(0))))
+               (flatten-exers (unless (eq flatexers 0) (list :exercise flatexers))))
           (push (append (list :date day) flatten-foods flatten-exers) summary))))))
 
 
@@ -193,6 +199,13 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
 ;;       (org-calories-db--trimandsort t)
 ;;       (save-buffer))))
 
+
+(defun org-calories-macros--printlast ()
+  "Print the last nutrients."
+  (message "%s" (cddar (org-calories-macros--summarize
+                        (org-calories-macros--collect)))))
+
+(add-hook 'org-calories-log-finishhook 'org-calories-macros--printlast)
 
 
 (provide 'org-calories-macros)

@@ -35,6 +35,8 @@
   :group 'org-calories
   :type 'string)
 
+(defvar org-calories-log-finishhook nil
+  "Finish hook.")
 
 (setq minibuffer-local-filename-completion-map nil) ;; prevents space from being a keyword during completion
 
@@ -45,7 +47,9 @@
 (defconst org-calories-log-str-daylogs "*** Logs")
 
 (defcustom org-calories-log-showsummary t
-  "Show a summary after logging.")
+  "Show a summary after logging."
+  :type 'boolean
+  :group 'org-calories)
 
 (defun org-calories-log--makeheaders ()
   "Make table headers."
@@ -128,8 +132,7 @@
   (message nil)
   (save-buffer)
   (if org-calories-log-showsummary
-      (message "%s" (cddar (org-calories-macros--summarize
-                            (org-calories-macros--collect))))))
+      (run-hooks org-calories-log-finishhook)))
 
 (defun org-calories-log-food (food &optional portion)
   "Log FOOD entry with PORTION."
@@ -140,21 +143,21 @@
   ;; Currently at table head
   (with-current-buffer (find-file-noselect org-calories-log-file)
     ;; At first empty
-    (unless (org-calories-entry--foods-retrieve food)
-      (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
-          (let ((newinfo (org-calories-entry-foods-insert food)))
-            (setq food (car newinfo)
-                  food-info (cdr newinfo)))))
-    ;;
-    (let* ((food-info (org-calories-entry--foods-retrieve food))
-           (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
-                                                          food food-info))))
-           (scaled-food (org-calories-db--scale-item food-info amount-want))
-           (scaled-calories (plist-get scaled-food :kc)))
-      (org-calories-log--goto-tableend)
-      (org-calories-log--insert 'food food amount-want scaled-calories)
-      (org-calories-db--trimandsort t)
-      (org-calories-log-runfinish))))
+    (let ((food-info (org-calories-entry--foods-retrieve food)))
+      (unless food-info
+        (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
+            (let ((newinfo (org-calories-entry-foods-insert food)))
+              (setq food (car newinfo)
+                    food-info (cdr newinfo)))))
+      ;;
+      (let* ((amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
+                                                            food food-info))))
+             (scaled-food (org-calories-db--scale-item food-info amount-want))
+             (scaled-calories (plist-get scaled-food :kc)))
+        (org-calories-log--goto-tableend)
+        (org-calories-log--insert 'food food amount-want scaled-calories)
+        (org-calories-db--trimandsort t)
+        (org-calories-log-runfinish)))))
 
 
 (defun org-calories-log-recipe (recipe &optional portion)
@@ -167,7 +170,7 @@
     ;;
     (unless (org-calories-entry--recipes-retrieve recipe)
       (if (y-or-n-p (format "Recipe '%s' does not exist, insert new? " recipe))
-          (org-calories-entry-recipe-insert recipe)))
+          (org-calories-entry-recipes-insert recipe)))
     ;;
     (let* ((recipe-info (org-calories-entry--recipes-retrieve recipe))
            (amount-want (or portion (read-number (message (format
@@ -193,7 +196,7 @@ The unit does not actually matter because it's set by the database and we are ju
   (with-current-buffer (find-file-noselect org-calories-log-file)
     (unless (org-calories-entry--exercises-retrieve exercise)
       (if (y-or-n-p (format "Exercise '%s' does not exist, insert new? " exercise))
-          (org-calories-entry-exercise-insert exercise)))
+          (org-calories-entry-exercises-insert exercise)))
     ;;
     (let* ((exercise-info (org-calories-entry--exercises-retrieve exercise))
            (amount-want (or amount
@@ -210,9 +213,11 @@ The unit does not actually matter because it's set by the database and we are ju
 
 
 ;;TODO:
-(defun org-calories-log-water (amount))
-(defun org-calories-log-weight (amount))
-  
+(defun org-calories-log-water (amount)
+  (ignore amount))
+(defun org-calories-log-weight (amount)
+  (ignore amount))
+
 
 
 (provide 'org-calories-log)
