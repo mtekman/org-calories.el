@@ -51,6 +51,17 @@
   :type 'boolean
   :group 'org-calories)
 
+(defun org-calories-log ()
+  "Log new entry."
+  (interactive)
+  (let* ((type (read-multiple-choice
+                "Entry Type: " '((?f "food")
+                                 (?r "recipe")
+                                 (?e "exercise"))))
+         (fstr (format "org-calories-log-%s" (cadr type)))
+         (fint (intern fstr)))
+    (call-interactively fint)))
+
 (defun org-calories-log--makeheaders ()
   "Make table headers."
   (let ((hed-year (format-time-string "* %Y"))

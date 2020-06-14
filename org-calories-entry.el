@@ -28,6 +28,17 @@
 (require 'org-calories-db)
 (require 'org-calories-online)
 
+(defun org-calories-entry ()
+  "Insert new entry.."
+  (interactive)
+  (let* ((type (read-multiple-choice
+                "Entry Type: " '((?f "food")
+                                 (?r "recipe")
+                                 (?e "exercise"))))
+         (fstr (format "org-calories-entry-%ss-insert" (cadr type)))
+         (fint (intern fstr)))
+    (call-interactively fint)))
+
 (defun org-calories-entry--foods-validateentry (pentry)
   "Checking the contents of PENTRY."
   (let ((judgement "Keeping inconsistency, but secretly judging you for it.")
