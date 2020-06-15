@@ -199,12 +199,13 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
 ;;       (save-buffer))))
 
 
-(defun org-calories-macros--printlast ()
+(defun org-calories-macros-printlast ()
   "Print the last nutrients."
+  (interactive)
   (message "%s" (cddar (org-calories-macros--summarize
                         (org-calories-macros--collect)))))
 
-(add-hook 'org-calories-log-finishhook 'org-calories-macros--printlast)
+(add-hook 'org-calories-log-finishhook #'org-calories-macros-printlast)
 
 
 (provide 'org-calories-macros)

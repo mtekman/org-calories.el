@@ -148,7 +148,7 @@
   (message nil)
   (save-buffer)
   (if org-calories-log-showsummary
-      (run-hooks org-calories-log-finishhook)))
+      (run-hooks 'org-calories-log-finishhook)))
 
 (defun org-calories-log-food (food &optional portion)
   "Log FOOD entry with PORTION."
