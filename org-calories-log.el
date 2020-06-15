@@ -62,6 +62,11 @@
          (fint (intern fstr)))
     (call-interactively fint)))
 
+(defun org-calories-log-show ()
+  "Show the log file"
+  (interactive)
+  (find-file org-calories-log-file))
+
 (defun org-calories-log--makeheaders ()
   "Make table headers."
   (let ((hed-year (format-time-string "* %Y"))

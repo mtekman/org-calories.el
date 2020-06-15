@@ -48,6 +48,11 @@
   "String 2 Num.  Extract the NUM index from PIN, zip it in and zip it out."
   (string-to-number (nth num pin)))
 
+(defun org-calories-db-show ()
+  "Show the database file"
+  (interactive)
+  (find-file org-calories-db-file))
+
 (defun org-calories-db--scale-item (plist-info amount)
   "For item TYPE, scale PLIST-INFO data by AMOUNT."
   (let* ((scaleamount (plist-get plist-info :amount))
