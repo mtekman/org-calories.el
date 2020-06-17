@@ -92,7 +92,7 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
       (message "Food '%s' already exists in the food table, not inserting." fname)
     (unless plist-info
       (let* ((insmeth (read-multiple-choice
-                       "Insert method: " '((?o "Online Search") (?m "Manual Input"))))
+                       "Insert method: " '((?m "Manual Input") (?o "Online Search"))))
              (chosen (car insmeth)))
         (cond ((eq chosen ?o)
                (--> (org-calories-online-search fname)
