@@ -172,53 +172,67 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
 
 (defun org-calories-macros--tableupdate (year month &optional day)
   "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
+  ;; TODO: Slow when day is true.
   (org-calories-log--makeheaders)
-  (let ((year (or year (string-to-number (format-time-string "%Y"))))
-        (month (or month (string-to-number (format-time-string "%m"))))
-        (day (or day (string-to-number (format-time-string "%d")))))
+  (let* ((year (or year (string-to-number (format-time-string "%Y"))))
+         (month (or month (string-to-number (format-time-string "%m"))))
+         (day (or day (string-to-number (format-time-string "%d"))))
+         (current-dailies (org-calories-macros--tableretrieve year month))
+         (header-order (--filter (symbolp it) (car current-dailies)))
+         ;; Parse the logbook
+         (new-daylist (org-calories-macros--summarize
+                       (org-calories-macros--collect year month day))))
+    ;; Update new-daylist into current-dailies
+    (dolist (day new-daylist current-dailies)
+      (let* ((new-date (plist-get day :date))
+             (new-day-num (org-calories-macros--timestring-to-integers new-date))
+             ;; do a string match on dates
+             (ind-date (--find-index (org-calories-macros--timestring-lteq
+                                      new-day-num
+                                      (org-calories-macros--timestring-to-integers
+                                       (plist-get it :date)))
+                                     current-dailies)))
+        (if ind-date
+            ;; Update existing
+            (let* ((get-date (nth ind-date current-dailies))
+                   (notes (plist-get get-date :notes))           ;; keep existing notes
+                   (new-day (append day (list :notes notes))))
+              (setq current-dailies
+                    (-replace-at ind-date new-day current-dailies)))
+          ;; Otherwise insert new date at the right location
+          (let ((insert-loc (--find-index (org-calories-macros--timestring-lteq
+                                           new-day-num
+                                           (org-calories-macros--timestring-to-integers
+                                            (plist-get it :date)))
+                                          current-dailies)))
+            (if insert-loc
+                (setq current-dailies (-insert-at insert-loc day current-dailies))
+              (setq current-dailies (append current-dailies
+                                            ;; new day with new empty notes
+                                            (list (append day (list :notes ""))))))))))
+    ;; Print out the whole table
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
       (when (search-forward (format "#+NAME:%4d-%02d-Dailies" year month) nil t)
         (forward-line 1)
-        (let ((header-order (--map (intern it) (car (org-table-to-lisp))))
-              (daylist (org-calories-macros--summarize
-                        (org-calories-macros--collect year month day))))
-          (org-calories-db--kill-table)
-          (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
-          ;; Process rows
-          (dolist (entry daylist)
-            (dolist (keyw header-order)
-              (let* ((am (plist-get entry keyw))
-                     (am (or am "-")))
-                (insert (format (if (floatp am) "| %.1f " "| %s ") am))
-                (when (eq keyw :date)
-                  (forward-whitespace -1)
-                  (forward-char -1)
-                  (org-timestamp-up-day)
-                  (org-timestamp-down-day)
-                  (forward-char 1)
-                  (forward-whitespace 1))))
-            (insert "|\n")))
-        (if (re-search-backward org-table-line-regexp nil t)
-            (org-table-align))))))
-
-
-
-;;     (unless (org-calories-entry--foods-retrieve food)
-;;       (if (y-or-n-p (format "Food '%s' does not exist, insert new? " food))
-;;           (let ((newinfo (org-calories-entry-foods-insert food)))
-;;             (setq food (car newinfo)
-;;                   food-info (cdr newinfo)))))
-;;     ;;
-;;     (let* ((food-info (org-calories-entry--foods-retrieve food))
-;;            (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
-;;                                                           food food-info))))
-;;            (scaled-food (org-calories-db--scale-item food-info amount-want))
-;;            (scaled-calories (plist-get scaled-food :kc)))
-;;       (org-calories-log--goto-tableend)
-;;       (org-calories-log--insert 'food food amount-want scaled-calories)
-;;       (org-calories-db--trimandsort t)
-;;       (save-buffer))))
+        (org-calories-db--kill-table)
+        (setf (buffer-substring (line-beginning-position) (line-end-position)) "")
+        ;; Process rows
+        (dolist (entry (reverse current-dailies))
+          (dolist (keyw header-order)
+            (let* ((am (plist-get entry keyw))
+                   (am (or am 0)))
+              (insert (format (if (floatp am) "| %.1f " "| %s ") am))
+              (when (eq keyw :date)
+                (forward-whitespace -1)
+                (forward-char -1)
+                (org-timestamp-up-day)
+                (org-timestamp-down-day)
+                (forward-char 1)
+                (forward-whitespace 1))))
+          (insert "|\n")))
+      (if (re-search-backward org-table-line-regexp nil t)
+          (org-table-align)))))
 
 
 (defun org-calories-macros-printlast ()
