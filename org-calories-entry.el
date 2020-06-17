@@ -143,17 +143,13 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
 
 (defun org-calories-entry--foods-add (finfo1 finfo2)
   "Add food info FINFO1 and FINFO2.  Foods should be scaled first."
-  (let ((adder (lambda (f1 f2 kw)(+ (plist-get f1 kw) (plist-get f2 kw)))))
-    (if (and finfo1 finfo2)
-        (list :kc (funcall adder finfo1 finfo2 :kc)
-              :carbs (funcall adder finfo1 finfo2 :carbs)
-              :fibre (funcall adder finfo1 finfo2 :fibre)
-              :sugars (funcall adder finfo1 finfo2 :sugars)
-              :protein (funcall adder finfo1 finfo2 :protein)
-              :fat (funcall adder finfo1 finfo2 :fat)
-              :sodium (funcall adder finfo1 finfo2 :sodium))
-      ;; return one or the other
-      (or finfo1 finfo2))))
+  (let ((adder (lambda (f1 f2 kw)(+ (or (plist-get f1 kw) 0)
+                               (or (plist-get f2 kw) 0))))
+        (keyws (--filter (and (keywordp it)
+                              (not (member it '(:name :unit :amount :date :type))))
+                         finfo1)))
+    (-flatten (loop for key in keyws
+                    collect (list key (funcall adder finfo1 finfo2 key))))))
 
 
 (defun org-calories-entry--recipes-calculate (recipe-info)
