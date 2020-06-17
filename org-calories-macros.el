@@ -154,6 +154,21 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
 
 
 
+(defun org-calories-macros--timestring-to-integers (timestr)
+  "Convert TIMESTR <2020-06-14> or <2020-06-14 Wed 16:15> to list (2020 6 14 16 15)."
+  (--filter (> it 0)(--map (string-to-number it)
+                           (split-string timestr "[-<>: ]"))))
+
+(defun org-calories-macros--timestring-lteq (timelst1 timelst2)
+  "TIMELST1 less than or equal to TIMELST2?"
+  (and
+   (and (<= (car timelst1) (car timelst2))        ;; year
+        (<= (cadr timelst1) (cadr timelst2))      ;; month
+        (<= (caddr timelst1) (caddr timelst2)))   ;; day
+   (if (eq (length timelst1) 3) t
+     (and (<= (cadddr timelst1) (cadddr timelst2))                 ;; hour
+          (<= (cadddr (cdr timelst1)) (cadddr (cdr timelst2))))))) ;; minute
+
 
 (defun org-calories-macros--tableupdate (year month &optional day)
   "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
