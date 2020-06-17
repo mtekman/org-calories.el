@@ -70,6 +70,10 @@ If GROUPDAY, then summarize by day."
              (exercises (--filter (eq (plist-get it :type) 'exercise) scaled-items-day)))
         (let* ((flatten-foods (--reduce (org-calories-entry--foods-add acc it)
                                         (append foods recipes)))
+               ;; If it's a single item, check again
+               (flatten-foods (if (plist-get flatten-foods :name)
+                                  (org-calories-entry--foods-add flatten-foods nil)
+                                flatten-foods))
                (flatexers (--reduce (+ acc it)
                                     (if exercises
                                         (--map (plist-get it :kc) exercises)
