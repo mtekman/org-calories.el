@@ -44,7 +44,8 @@
   (let ((judgement "Not changing amount.")
         (kc (plist-get pentry :kc)) (amount (plist-get pentry :amount)) (unit (plist-get pentry :unit))
         (carbs (plist-get pentry :carbs)) (fibre (plist-get pentry :fibre)) (sugars (plist-get pentry :sugars))
-        (protein (plist-get pentry :protein)) (fat (plist-get pentry :fat)) (sodium (plist-get pentry :sodium)))
+        (protein (plist-get pentry :protein)) (fat (plist-get pentry :fat)) (saturated (plist-get pentry :sat))
+        (salt (plist-get pentry :salt)))
     ;; Carbs fix
     (let ((visiblecarbs (+ fibre sugars)))
       (unless (<= visiblecarbs carbs)
@@ -74,13 +75,13 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
               fibre protein fat newkc kc newkc))
             (setq kc newkc)
           (message judgement))))
-    `(:amount ,amount :unit ,unit :kc ,kc :fat ,fat
+    `(:amount ,amount :unit ,unit :kc ,kc :fat ,fat :sat ,saturated
               :carbs ,carbs :sugars ,sugars :fibre ,fibre
-              :protein ,protein :sodium ,sodium)))
+              :protein ,protein :salt ,salt)))
 
 (defun org-calories-entry--foods-newentry (fname)
   "Create a new plist food entry named FNAME."
-  (let* ((headers (list :amount :unit :kc :fat :carbs :sugars :fibre :protein :sodium))
+  (let* ((headers (list :amount :unit :kc :fat :sat :carbs :sugars :fibre :protein :salt))
          (result (split-string
                   (read-string
                    (format "[%s] -- kCals and Grams:\n%s\n" fname
@@ -198,9 +199,9 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
 
 
 ;;;; -{Tests}-
-;; (org-calories-entry-foods-insert "fruit1" '(:kc 110 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry-foods-insert "fruit2" '(:kc 120 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
-;; (org-calories-entry-foods-insert "fruit3" '(:kc 130 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sodium 123))
+;; (org-calories-entry-foods-insert "fruit1" '(:kc 110 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sat 3 :salt 123))
+;; (org-calories-entry-foods-insert "fruit2" '(:kc 120 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sat 3 :salt 123))
+;; (org-calories-entry-foods-insert "fruit3" '(:kc 130 :amount 100 :unit 'grams :carbs 50 :fibre 30 :sugars 10 :protein 10 :fat 5 :sat 3 :salt 123))
 ;; (org-calories-entry-foods-retrieve "fruit2")
 ;; (org-calories-entry-foods-insert "chew")
 ;; (org-calories-entry-recipes-insert "fruit salad" '((:food "fruit1" :amount 30) (:food "fruit2" :amount 120) (:food "fruit3" :amount 50)))

@@ -83,7 +83,7 @@
         ;; Search for Macros
         (unless (search-forward "* Macros" nil t)
           (org-calories-db--maketable "* Macros" "Macros"
-                                      "| :timestamp | :kc | :fat | :carbs | :sugars | :fibre | :protein | :exercise | :water |"))
+                                      "| :timestamp | :kc | :fat | :sat | :carbs | :sugars | :fibre | :protein | :exercise | :water |"))
         ;; Search for Year, Month
         (unless (search-forward hed-year nil t)
           (insert (format "\n%s\n" hed-year)))
@@ -92,7 +92,7 @@
         ;; Search for tables
         (unless (search-forward (concat "#+NAME:" tbl-dail) nil t)
           (insert "\n\n")
-          (org-calories-db--maketable nil tbl-dail "| :timestamp | :kc | :fat | :carbs | :sugars | :fibre | :protein | :sodium | :exercise | :water |"))
+          (org-calories-db--maketable nil tbl-dail "| :timestamp | :kc | :fat | :sat | :carbs | :sugars | :fibre | :protein | :salt | :exercise | :water |"))
         (unless (search-forward (concat "#+NAME:" tbl-logs) nil t)
           (insert "\n\n")
           (org-calories-db--maketable nil tbl-dail "| :timestamp | :type | :item | :amount | ~KC |"))))))

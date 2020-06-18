@@ -115,7 +115,7 @@
                    (forward-line -1))
           (goto-char (point-max)))
       (org-calories-db--maketable org-calories-db--str-dbfood "Food"
-                                  "| :name | :amount | :unit | :kc | :fat | :carbs | :sugars | :fibre | :protein | :sodium |"))
+                                  "| :name | :amount | :unit | :kc | :fat | :sat | :carbs | :sugars | :fibre | :protein | :salt |"))
     ;; Make Recipe, vor Exercises
     (if (search-forward org-calories-db--str-dbrecp nil t)
         (if (search-forward org-calories-db--str-dbexer nil t)

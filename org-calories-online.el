@@ -81,12 +81,13 @@
                                    (format "%3dg" (plist-get (nth 2 it) :fibre))
                                    (format "%3dg" (plist-get (nth 2 it) :protein))
                                    (format "%3dg" (plist-get (nth 2 it) :fat))
-                                   (format "%3dmg" (plist-get (nth 2 it) :sodium))))
+                                   ;;(format "%3dg" (plist-get (nth 2 it) :sat)) -- not relevant here
+                                   (format "%3dg" (plist-get (nth 2 it) :salt))))
                      reftitle)))
         (push (list :food "--" :food-info nil
                     :user-options (format form-string
                                           (make-string widthspacing ?-)
-                                          "Amount" "kCal" "Carb" "Sug" "Fib" "Pro" "Fat" "Sodm"))
+                                          "Amount" "kCal" "Carb" "Sug" "Fib" "Pro" "Fat" "Salt"))
               food-matches)
         food-matches))))
 
@@ -108,19 +109,20 @@
 
 (defun org-calories-online--extractrelevant (info)
   "Extract relevant calorific info from INFO derived from --getinfo."
-  (let* ((calorie (org-calories-online--inlineextract "Calories" info))
-         (pamount (org-calories-online--inlineextract "Portion" info))
-         (totcarb (org-calories-online--inlineextract "Carbohydrates" info))
-         (cafibre (org-calories-online--inlineextract "Dietary fibre" info))
-         (casugar (org-calories-online--inlineextract "thereof Sugar" info))
-         (protein (org-calories-online--inlineextract "Protein" info))
-         (fatamnt (org-calories-online--inlineextract "Fat" info))
-         (sodiumv (org-calories-online--inlineextract "Sodium" info)))
+  (let ((calorie (org-calories-online--inlineextract "Calories" info))
+        (pamount (org-calories-online--inlineextract "Portion" info))
+        (totcarb (org-calories-online--inlineextract "Carbohydrates" info))
+        (cafibre (org-calories-online--inlineextract "Dietary fibre" info))
+        (casugar (org-calories-online--inlineextract "thereof Sugar" info))
+        (protein (org-calories-online--inlineextract "Protein" info))
+        (fatamnt (org-calories-online--inlineextract "Fat" info))
+        (saltamt (org-calories-online--inlineextract "Salt" info)))
     (list :amount (car pamount) :unit (cdr pamount)
           :kc (car calorie)
           :carbs (car totcarb) :fibre (car cafibre) :sugars (car casugar)
           :protein (car protein) :fat (car fatamnt)
-          :sodium (or (car sodiumv) 0))))
+          :sat (/ (car fatamnt) 2)  ;; is not captured on this website, so we assume 50%
+          :salt (car saltamt))))
 
 
 (defun org-calories-online--getinfo (url)
