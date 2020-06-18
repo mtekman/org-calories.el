@@ -162,7 +162,7 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
              (foodinfo (or (org-calories-entry--foods-retrieve foodname)
                            (user-error "Count not find: %s" foodname)))
              (foodscal (org-calories-db--scale-item foodinfo fportion)))
-        (setq food-total (org-calories-entry--foods-add food-total foodscal))))
+        (setq food-total (org-calories-entry--foods-add foodscal food-total))))
     ;; here we add a new field to make it recipe compliant
     (append (list :amount amount-native :unit "recipe") food-total)))
 
