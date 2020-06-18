@@ -40,26 +40,33 @@
     (call-interactively fint)))
 
 (defun org-calories-entry--foods-validateentry (pentry)
-  "Checking the contents of PENTRY."
-  (let ((judgement "Keeping inconsistency, but secretly judging you for it.")
+  "Checking the contents of PENTRY, usually generated after foods--newentry."
+  (let ((judgement "Not changing amount.")
         (kc (plist-get pentry :kc)) (amount (plist-get pentry :amount)) (unit (plist-get pentry :unit))
         (carbs (plist-get pentry :carbs)) (fibre (plist-get pentry :fibre)) (sugars (plist-get pentry :sugars))
         (protein (plist-get pentry :protein)) (fat (plist-get pentry :fat)) (sodium (plist-get pentry :sodium)))
+    ;; Carbs fix
     (let ((visiblecarbs (+ fibre sugars)))
       (unless (<= visiblecarbs carbs)
-        (if (y-or-n-p
-             (format
-              "(Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)\n\
+        (if (y-or-n-p (format
+                       "(Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)\n\
 Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg? "
               fibre sugars carbs
               (format (if (floatp visiblecarbs) "%.1f" "%d") visiblecarbs)))
             (setq carbs visiblecarbs)
           (message judgement))))
+    ;; Fat fix
+    (unless (<= saturated fat)
+      (if (y-or-n-p (format
+                     "Saturated Fat (%.1fg) cannot be larger than Total Fat (%.1fg).  Change Total Fat to %.1fg? "
+                     saturated fat saturated))
+          (setq fat saturated)
+        (message judgement)))
+    ;; Total KC fix
     (let ((newkc (+ (* 4 (- carbs fibre)) (* 4 protein) (* 9 fat))))
       (unless (= newkc kc)
-        (if (y-or-n-p
-             (format
-              "[Calculation Error]\n\
+        (if (y-or-n-p (format
+                       "[Calculation Error]\n\
  (4*((carbs - fibre) + protein)) + (9*fat) =\n\
  (4*((%s - %s) + %s)) + (7*%s) = %s kCal\n\
 This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s kCal instead? "
@@ -101,7 +108,9 @@ This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s
                       (setq fname newname
                             plist-info (plist-get it :food-info)))))
               ((eq chosen ?m)
-               (setq plist-info (org-calories-entry--foods-newentry fname)))
+               (let* ((new-entry (org-calories-entry--foods-newentry fname))
+                      (valid-entry (org-calories-entry--foods-validateentry new-entry)))
+                 (setq plist-info valid-entry)))
               (t (user-error "Invalid selection")))))
     ;;
     (cl-pushnew (cons fname plist-info) org-calories-db--foods :key #'car)
