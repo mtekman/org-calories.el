@@ -150,6 +150,15 @@
   (if org-calories-log-showsummary
       (run-hooks 'org-calories-log-finishhook)))
 
+(defun org-calories-log--endlog (type name amount kc)
+  "Function that occurs after logging.
+Inserts TYPE NAME AMOUNT KC, sorts and trims the table."
+  (save-excursion
+    (org-calories-log--goto-tableend)
+    (org-calories-log--insert type name amount kc)
+    (org-calories-db--trimandsort t)
+    (org-calories-log-runfinish)))
+
 (defun org-calories-log-food (food &optional portion)
   "Log FOOD entry with PORTION."
   (interactive
@@ -170,11 +179,9 @@
                                                             food food-info))))
              (scaled-food (org-calories-db--scale-item food-info amount-want))
              (scaled-calories (plist-get scaled-food :kc)))
-        (save-excursion
-          (org-calories-log--goto-tableend)
-          (org-calories-log--insert 'food food amount-want scaled-calories)
-          (org-calories-db--trimandsort t)
-          (org-calories-log-runfinish))))))
+        (org-calories-log--endlog 'food food amount-want scaled-calories)))))
+
+
 
 
 (defun org-calories-log-recipe (recipe &optional portion)
@@ -198,10 +205,8 @@
            (calced-recipe (org-calories-entry--recipes-calculate recipe-info))
            (scaled-recipe (org-calories-db--scale-item calced-recipe amount-want))
            (scaled-calories (plist-get scaled-recipe :kc)))
-      (org-calories-log--goto-tableend)
-      (org-calories-log--insert 'recipe recipe amount-want scaled-calories)
-      (org-calories-db--trimandsort t)
-      (org-calories-log-runfinish))))
+      (org-calories-log--endlog 'recipe recipe amount-want scaled-calories))))
+
 
 (defun org-calories-log-exercise (exercise &optional amount)
   "Log EXERCISE entry with optional AMOUNT.
@@ -222,11 +227,8 @@ The unit does not actually matter because it's set by the database and we are ju
                                                    exercise exercise-info)))))
            (scaled-exercise (org-calories-db--scale-item exercise-info amount-want))
            (scaled-calories (plist-get scaled-exercise :kc)))
-      (org-calories-log--goto-tableend)
-      (org-calories-log--insert 'exercise exercise amount-want
-                                (- scaled-calories)) ;; negative kc
-      (org-calories-db--trimandsort t)
-      (org-calories-log-runfinish))))
+      (org-calories-log--endlog 'exercise exercise amount-want
+                                (- scaled-calories))))) ;; negative kc
 
 
 ;;TODO:
