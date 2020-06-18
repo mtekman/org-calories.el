@@ -169,6 +169,17 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
      (and (<= (cadddr timelst1) (cadddr timelst2))                 ;; hour
           (<= (cadddr (cdr timelst1)) (cadddr (cdr timelst2))))))) ;; minute
 
+(defun org-calories-macros--timestring-eq (timelst1 timelst2)
+  "TIMELST1 equal to TIMELST2?"
+  (and
+   (and (= (car timelst1) (car timelst2))        ;; year
+        (= (cadr timelst1) (cadr timelst2))      ;; month
+        (= (caddr timelst1) (caddr timelst2)))   ;; day
+   (if (eq (length timelst1) 3) t
+     (and (= (cadddr timelst1) (cadddr timelst2))                 ;; hour
+          (= (cadddr (cdr timelst1)) (cadddr (cdr timelst2))))))) ;; minute
+
+
 
 (defun org-calories-macros--tableupdate (year month &optional day)
   "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
@@ -187,7 +198,7 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
       (let* ((new-date (plist-get day :date))
              (new-day-num (org-calories-macros--timestring-to-integers new-date))
              ;; do a string match on dates
-             (ind-date (--find-index (org-calories-macros--timestring-lteq
+             (ind-date (--find-index (org-calories-macros--timestring-eq
                                       new-day-num
                                       (org-calories-macros--timestring-to-integers
                                        (plist-get it :date)))
@@ -196,7 +207,7 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
             ;; Update existing
             (let* ((get-date (nth ind-date current-dailies))
                    (notes (plist-get get-date :notes))           ;; keep existing notes
-                   (new-day (append day (list :notes notes))))
+                   (new-day (append day (list :notes (or notes "")))))
               (setq current-dailies
                     (-replace-at ind-date new-day current-dailies)))
           ;; Otherwise insert new date at the right location
@@ -204,12 +215,13 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                                            new-day-num
                                            (org-calories-macros--timestring-to-integers
                                             (plist-get it :date)))
-                                          current-dailies)))
+                                          current-dailies))
+                (new-day (append day (list :notes ""))))
             (if insert-loc
-                (setq current-dailies (-insert-at insert-loc day current-dailies))
+                (setq current-dailies (-insert-at insert-loc new-day current-dailies))
               (setq current-dailies (append current-dailies
                                             ;; new day with new empty notes
-                                            (list (append day (list :notes ""))))))))))
+                                            (list new-day))))))))
     ;; Print out the whole table
     (with-current-buffer (find-file-noselect org-calories-log-file)
       (goto-char 0)
