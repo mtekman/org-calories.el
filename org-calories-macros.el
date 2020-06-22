@@ -197,6 +197,9 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
     (dolist (day new-daylist current-dailies)
       (let* ((new-date (plist-get day :date))
              (new-day-num (org-calories-macros--timestring-to-integers new-date))
+             ;; subtract exercises from kc
+             (day (plist-put day :kc (- (plist-get day :kc)
+                                        (or (plist-get day :exercise) 0))))
              ;; do a string match on dates
              (ind-date (--find-index (org-calories-macros--timestring-eq
                                       new-day-num
