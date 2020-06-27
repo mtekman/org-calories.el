@@ -49,7 +49,7 @@
   (string-to-number (nth num pin)))
 
 (defun org-calories-db-show ()
-  "Show the database file"
+  "Show the database file."
   (interactive)
   (find-file org-calories-db-file))
 

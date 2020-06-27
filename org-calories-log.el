@@ -29,6 +29,7 @@
 (require 'org-table)
 (require 'org-calories-db)
 (require 'org-calories-entry)
+(require 'org-calories-timestring)
 
 (defcustom org-calories-log-file nil
   "Location of daily logging file."
@@ -38,7 +39,7 @@
 (defvar org-calories-log-finishhook nil
   "Finish hook.")
 
-(setq minibuffer-local-filename-completion-map nil) ;; prevents space from being a keyword during completion
+;;(setq minibuffer-local-filename-completion-map nil) ;; prevents space from being a keyword during completion
 
 ;; Strings
 (defconst org-calories-log-str-ltitled "#+TITLE: Daily Logs")
@@ -63,7 +64,7 @@
     (call-interactively fint)))
 
 (defun org-calories-log-show ()
-  "Show the log file"
+  "Show the log file."
   (interactive)
   (find-file org-calories-log-file))
 
@@ -182,6 +183,28 @@ Inserts TYPE NAME AMOUNT KC, sorts and trims the table."
         (org-calories-log--endlog 'food food amount-want scaled-calories)))))
 
 
+(defun org-calories-log-note (&optional date)
+  "Log note for DATE."
+  (interactive)
+  (let* ((tabdt nil)
+         (daten (or date (org-calories-timestring--to-integers (org-read-date))))
+         (tabld (format "#+NAME:%4d-%02d-Notes" (car daten) (cadr daten)))
+         (datem (--reduce (* acc it) daten))
+         (bas64 (base64-encode-string (format "%s" datem))))
+    (with-current-buffer (find-file-noselect org-calories-log-file)
+      (goto-char 0)
+      (when (search-forward tabld nil t)
+        (forward-line 1)
+        (let* ((table-data (org-table-to-lisp))
+               (header-order (--map (if (string-prefix-p ":" it) (intern it))
+                                    (car table-data))))
+          (dolist (row (cddr table-data) tabdt)
+            (let ((paired-data (--reduce-from (append acc it) nil
+                                              (--filter (car it) ;; discard non-keyword columns
+                                                        (--zip-with (list it other)
+                                                                    header-order
+                                                                    row)))))
+              (push paired-data tabdt))))))))
 
 
 (defun org-calories-log-recipe (recipe &optional portion)
@@ -238,7 +261,6 @@ The unit does not actually matter because it's set by the database and we are ju
 (defun org-calories-log-weight (amount)
   "Log weight AMOUNT."
   (ignore amount))
-
 
 
 (provide 'org-calories-log)

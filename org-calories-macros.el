@@ -26,6 +26,7 @@
 
 ;;; Code:
 (require 'org-calories-log)
+(require 'org-calories-timestring)
 
 (defun org-calories-macros--get ()
   "Get latest target macros."
@@ -55,10 +56,9 @@
           daily)))))
 
 
-(defun org-calories-macros--summarize (scaled-items &optional groupday)
+(defun org-calories-macros--summarize (scaled-items &optional subexer)
   "Summarize the list of SCALED-ITEMS into total nutritients, and calories.
-If GROUPDAY, then summarize by day."
-  (ignore groupday)
+If SUBEXER, then subtract the exercise kCal from the food kCal."
   (let ((summary nil)
         (daylist (-uniq (--map (plist-get it :date) scaled-items))))
     (dolist (day daylist summary) ;; always return a list of lists
@@ -79,7 +79,12 @@ If GROUPDAY, then summarize by day."
                                         (--map (plist-get it :kc) exercises)
                                       '(0))))
                (flatten-exers (unless (eq flatexers 0) (list :exercise flatexers))))
-          (push (append (list :date day) flatten-foods flatten-exers) summary))))))
+          (let ((summed-line (append (list :date day) flatten-foods flatten-exers)))
+            (if subexer
+                (setq summed-line (plist-put summed-line :kc
+                                             (- (plist-get summed-line :kc)
+                                                (or (plist-get summed-line :exercise) 0)))))
+            (push summed-line summary)))))))
 
 
 (defun org-calories-macros--collect (&optional year month day)
@@ -154,33 +159,6 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
 
 
 
-(defun org-calories-macros--timestring-to-integers (timestr)
-  "Convert TIMESTR <2020-06-14> or <2020-06-14 Wed 16:15> to list (2020 6 14 16 15)."
-  (--filter (> it 0)(--map (string-to-number it)
-                           (split-string timestr "[-<>: ]"))))
-
-(defun org-calories-macros--timestring-lteq (timelst1 timelst2)
-  "TIMELST1 less than or equal to TIMELST2?"
-  (and
-   (and (<= (car timelst1) (car timelst2))        ;; year
-        (<= (cadr timelst1) (cadr timelst2))      ;; month
-        (<= (caddr timelst1) (caddr timelst2)))   ;; day
-   (if (eq (length timelst1) 3) t
-     (and (<= (cadddr timelst1) (cadddr timelst2))                 ;; hour
-          (<= (cadddr (cdr timelst1)) (cadddr (cdr timelst2))))))) ;; minute
-
-(defun org-calories-macros--timestring-eq (timelst1 timelst2)
-  "TIMELST1 equal to TIMELST2?"
-  (and
-   (and (= (car timelst1) (car timelst2))        ;; year
-        (= (cadr timelst1) (cadr timelst2))      ;; month
-        (= (caddr timelst1) (caddr timelst2)))   ;; day
-   (if (eq (length timelst1) 3) t
-     (and (= (cadddr timelst1) (cadddr timelst2))                 ;; hour
-          (= (cadddr (cdr timelst1)) (cadddr (cdr timelst2))))))) ;; minute
-
-
-
 (defun org-calories-macros--tableupdate (year month &optional day)
   "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
   ;; TODO: Slow when day is true.
@@ -192,18 +170,15 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
          (header-order (--filter (symbolp it) (car current-dailies)))
          ;; Parse the logbook
          (new-daylist (org-calories-macros--summarize
-                       (org-calories-macros--collect year month day))))
+                       (org-calories-macros--collect year month day) t)))
     ;; Update new-daylist into current-dailies
     (dolist (day new-daylist current-dailies)
       (let* ((new-date (plist-get day :date))
-             (new-day-num (org-calories-macros--timestring-to-integers new-date))
-             ;; subtract exercises from kc
-             (day (plist-put day :kc (- (plist-get day :kc)
-                                        (or (plist-get day :exercise) 0))))
+             (new-day-num (org-calories-timestring--to-integers new-date))
              ;; do a string match on dates
-             (ind-date (--find-index (org-calories-macros--timestring-eq
+             (ind-date (--find-index (org-calories-timestring--eq
                                       new-day-num
-                                      (org-calories-macros--timestring-to-integers
+                                      (org-calories-timestring--to-integers
                                        (plist-get it :date)))
                                      current-dailies)))
         (if ind-date
@@ -214,9 +189,9 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
               (setq current-dailies
                     (-replace-at ind-date new-day current-dailies)))
           ;; Otherwise insert new date at the right location
-          (let ((insert-loc (--find-index (org-calories-macros--timestring-lteq
+          (let ((insert-loc (--find-index (org-calories-timestring--lteq
                                            new-day-num
-                                           (org-calories-macros--timestring-to-integers
+                                           (org-calories-timestring--to-integers
                                             (plist-get it :date)))
                                           current-dailies))
                 (new-day (append day (list :notes ""))))
@@ -254,7 +229,7 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
   "Print the last nutrients."
   (interactive)
   (message "%s" (cddar (org-calories-macros--summarize
-                        (org-calories-macros--collect)))))
+                        (org-calories-macros--collect) t))))
 
 (add-hook 'org-calories-log-finishhook #'org-calories-macros-printlast)
 

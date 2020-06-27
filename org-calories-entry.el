@@ -52,8 +52,8 @@
         (if (y-or-n-p (format
                        "(Note: Fibre contributes towards Total Carbs, but is subtracted when calculating *Calories* from Carbs)\n\
 Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg? "
-              fibre sugars carbs
-              (format (if (floatp visiblecarbs) "%.1f" "%d") visiblecarbs)))
+                       fibre sugars carbs
+                       (format (if (floatp visiblecarbs) "%.1f" "%d") visiblecarbs)))
             (setq carbs visiblecarbs)
           (message judgement))))
     ;; Fat fix
@@ -71,8 +71,8 @@ Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg? "
  (4*((carbs - fibre) + protein)) + (9*fat) =\n\
  (4*((%s - %s) + %s)) + (7*%s) = %s kCal\n\
 This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s kCal instead? "
-              (format (if (floatp carbs) "%.1f" "%d") carbs)
-              fibre protein fat newkc kc newkc))
+                       (format (if (floatp carbs) "%.1f" "%d") carbs)
+                       fibre protein fat newkc kc newkc))
             (setq kc newkc)
           (message judgement))))
     `(:amount ,amount :unit ,unit :kc ,kc :fat ,fat :sat ,saturated
@@ -153,13 +153,12 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
 
 (defun org-calories-entry--foods-add (finfo1 finfo2)
   "Add food info FINFO1 and FINFO2.  Foods should be scaled first."
-  (let ((adder (lambda (f1 f2 kw)(+ (or (plist-get f1 kw) 0)
-                               (or (plist-get f2 kw) 0))))
+  (let ((adder (lambda (f1 f2 kw) (+ (or (plist-get f1 kw) 0) (or (plist-get f2 kw) 0))))
         (keyws (--filter (and (keywordp it)
                               (not (member it '(:name :unit :amount :date :type))))
                          finfo1)))
-    (-flatten (loop for key in keyws
-                    collect (list key (funcall adder finfo1 finfo2 key))))))
+    (-flatten (cl-loop for key in keyws
+                       collect (list key (funcall adder finfo1 finfo2 key))))))
 
 
 (defun org-calories-entry--recipes-calculate (recipe-info)
@@ -179,7 +178,7 @@ RecipeAmnt\t\tFood::Amount\t\tFood::Amount\t\tetc.\n"))))
 (defun org-calories-entry--exercises-newentry (ename)
   "Create a new plist exercise entry named ENAME."
   (let* ((result
-          (read-string (concat "[" ename "] -- Duration(Mins) and Calories(kC): "))))
+          (read-string (concat "[" ename "] -- duration unit  kC\n "))))
     (org-calories-db--exercises2plist (split-string result))))
 
 (defun org-calories-entry-exercises-insert (ename &optional plist-info)
