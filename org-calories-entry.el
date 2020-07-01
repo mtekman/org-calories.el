@@ -69,10 +69,9 @@ Fibre(%sg) + Sugar(%sg) are > Total Carbs(%sg).  Change Total Carbs to %sg? "
         (if (y-or-n-p (format
                        "[Calculation Error]\n\
  (4*((carbs - fibre) + protein)) + (9*fat) =\n\
- (4*((%s - %s) + %s)) + (7*%s) = %s kCal\n\
-This is not equal to the assigned %s kCal.  Set Calories for this portion to  %s kCal instead? "
-                       (format (if (floatp carbs) "%.1f" "%d") carbs)
-                       fibre protein fat newkc kc newkc))
+ (4*((%.1f - %.1f) + %1.f)) + (7*%1.f) = %.1f kCal\n\
+This is not equal to the assigned %.1f kCal.  Set Calories for this portion to  %.1f kCal instead? "
+                       carbs fibre protein fat newkc kc newkc))
             (setq kc newkc)
           (message judgement))))
     `(:amount ,amount :unit ,unit :kc ,kc :fat ,fat :sat ,saturated
