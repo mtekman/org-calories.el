@@ -36,6 +36,24 @@
   :group 'org-calories
   :type 'string)
 
+(defcustom org-calories-log-headers-macros
+  '(:kc :fat :sat :carbs :sugars :fibre :protein :exercise :water)
+  "Headers to use when creating macro tables."
+  :group 'org-calories
+  :type 'list)
+
+(defcustom org-calories-log-headers-dailies
+  '(:kc :fat :sat :carbs :sugars :fibre :protein :salt :exercise :water)
+  "Headers to use when creating dailies tables."
+  :group 'org-calories
+  :type 'list)
+
+(defcustom org-calories-log-headers-logbook
+  '(:type :item :amount)
+  "Headers to use when creating logbook tables."
+  :group 'org-calories
+  :type 'list)
+
 (defvar org-calories-log-finishhook nil
   "Finish hook.")
 
@@ -70,33 +88,38 @@
 
 (defun org-calories-log--makeheaders ()
   "Make table headers."
-  (let ((hed-year (format-time-string "* %Y"))
-        (hed-month (format-time-string "** %m - %b"))
-        (tbl-logs (format-time-string "%Y-%m-Logbook"))
-        (tbl-dail (format-time-string "%Y-%m-Dailies")))
-    (with-current-buffer (find-file-noselect org-calories-log-file)
-      (save-excursion
-        (goto-char 0)
-        ;; Make Title if not found
-        (unless (search-forward org-calories-log-str-ltitled nil t)
-          (insert org-calories-log-str-ltitled)
-          (insert "\n\n"))
-        ;; Search for Macros
-        (unless (search-forward "* Macros" nil t)
-          (org-calories-db--maketable "* Macros" "Macros"
-                                      "| :timestamp | :kc | :fat | :sat | :carbs | :sugars | :fibre | :protein | :exercise | :water |"))
-        ;; Search for Year, Month
-        (unless (search-forward hed-year nil t)
-          (insert (format "\n%s\n" hed-year)))
-        (unless (search-forward hed-month nil t)
-          (insert (format "\n%s\n" hed-month)))
-        ;; Search for tables
-        (unless (search-forward (concat "#+NAME:" tbl-dail) nil t)
-          (insert "\n\n")
-          (org-calories-db--maketable nil tbl-dail "| :timestamp | :kc | :fat | :sat | :carbs | :sugars | :fibre | :protein | :salt | :exercise | :water |"))
-        (unless (search-forward (concat "#+NAME:" tbl-logs) nil t)
-          (insert "\n\n")
-          (org-calories-db--maketable nil tbl-dail "| :timestamp | :type | :item | :amount | ~KC |"))))))
+  (cl-labels ((tblheader (beg middlelist end)
+                         (concat beg (--reduce (format "%s | %s" acc it) middlelist) end))
+              (maketable (header tblname dstring header-list)
+                         (org-calories-db--maketable
+                          header tblname
+                          (tblheader dstring header-list " |"))))
+    (let ((hed-year (format-time-string "* %Y"))
+          (hed-month (format-time-string "** %m - %b"))
+          (tbl-logs (format-time-string "%Y-%m-Logbook"))
+          (tbl-dail (format-time-string "%Y-%m-Dailies")))
+      (with-current-buffer (find-file-noselect org-calories-log-file)
+        (save-excursion
+          (goto-char 0)
+          ;; Make Title if not found
+          (unless (search-forward org-calories-log-str-ltitled nil t)
+            (insert org-calories-log-str-ltitled)
+            (insert "\n\n"))
+          ;; Search for Macros
+          (unless (search-forward "* Macros" nil t)
+            (maketable "* Macros" "Macros" "| :timestamp | " org-calories-log-headers-macros))
+          ;; Search for Year, Month
+          (unless (search-forward hed-year nil t)
+            (insert (format "\n%s\n" hed-year)))
+          (unless (search-forward hed-month nil t)
+            (insert (format "\n%s\n" hed-month)))
+          ;; Search for tables
+          (unless (search-forward (concat "#+NAME:" tbl-dail) nil t)
+            (insert "\n\n")
+            (maketable nil tbl-dail "| :date | " org-calories-log-headers-dailies))
+          (unless (search-forward (concat "#+NAME:" tbl-logs) nil t)
+            (insert "\n\n")
+            (maketable nil tbl-logs "| :timestamp | " (append org-calories-log-headers-logbook (list '~KC)))))))))
 
 (defun org-calories-log--completions (type)
   "Produce completion keys for TYPE."
