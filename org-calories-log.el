@@ -199,8 +199,9 @@ Inserts TYPE NAME AMOUNT KC, sorts and trims the table."
               (setq food (car newinfo)
                     food-info (cdr newinfo)))))
       ;;
-      (let* ((amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (g)? "
-                                                            food food-info))))
+      (let* ((portion-unit (plist-get food-info :unit))
+             (amount-want (or portion (read-number (message "[%s] -- %s\nWhat portion of food (%s)? "
+                                                            food food-info portion-unit))))
              (scaled-food (org-calories-db--scale-item food-info amount-want))
              (scaled-calories (plist-get scaled-food :kc)))
         (org-calories-log--endlog 'food food amount-want scaled-calories)))))
