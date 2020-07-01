@@ -106,35 +106,36 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
         (forward-line 1)
         (let ((list-items nil))
           (dolist (line (cddr (org-table-to-lisp)) list-items)
-            (let ((timestamp (nth 0 line))
-                  (type (intern (downcase (nth 1 line))))
-                  (item (nth 2 line))
-                  (amount (string-to-number (nth 3 line))))
-              ;;(kc (string-to-number (nth 4 line))))
-              (let* ((timedata (cadr (org-timestamp-from-string timestamp)))
-                     (timekey (format "%4d-%02d-%02d"
-                                      (plist-get timedata :year-start)
-                                      (plist-get timedata :month-start)
-                                      (plist-get timedata :day-start)))
-                     (timestamp (format "<%s>" timekey)))
-                (if (string-prefix-p timepref timekey)
-                    (let ((amount-scaled
-                           (cond ((string= type "food")
-                                  (org-calories-db--scale-item
-                                   (org-calories-entry--foods-retrieve item)
-                                   amount))
-                                 ((string= type "recipe")
-                                  (org-calories-db--scale-item
-                                   (org-calories-entry--recipes-calculate
-                                    (org-calories-entry--recipes-retrieve item))
-                                   amount))
-                                 ((string= type "exercise")
-                                  (org-calories-db--scale-item
-                                   (org-calories-entry--exercises-retrieve item)
-                                   amount))
-                                 (t (user-error "No such type")))))
-                      (push (append (list :date timestamp :name item :type type) amount-scaled)
-                            list-items)))))))))))
+            (if (> (length (car line)) 0)
+                (let ((timestamp (nth 0 line))
+                      (type (intern (downcase (nth 1 line))))
+                      (item (nth 2 line))
+                      (amount (string-to-number (nth 3 line))))
+                  ;;(kc (string-to-number (nth 4 line))))
+                  (let* ((timedata (cadr (org-timestamp-from-string timestamp)))
+                         (timekey (format "%4d-%02d-%02d"
+                                          (plist-get timedata :year-start)
+                                          (plist-get timedata :month-start)
+                                          (plist-get timedata :day-start)))
+                         (timestamp (format "<%s>" timekey)))
+                    (if (string-prefix-p timepref timekey)
+                        (let ((amount-scaled
+                               (cond ((string= type "food")
+                                      (org-calories-db--scale-item
+                                       (org-calories-entry--foods-retrieve item)
+                                       amount))
+                                     ((string= type "recipe")
+                                      (org-calories-db--scale-item
+                                       (org-calories-entry--recipes-calculate
+                                        (org-calories-entry--recipes-retrieve item))
+                                       amount))
+                                     ((string= type "exercise")
+                                      (org-calories-db--scale-item
+                                       (org-calories-entry--exercises-retrieve item)
+                                       amount))
+                                     (t (user-error "No such type")))))
+                          (push (append (list :date timestamp :name item :type type) amount-scaled)
+                                list-items))))))))))))
 
 
 (defun org-calories-macros--tableretrieve (year month)
@@ -158,15 +159,16 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
               (push paired-data tabdata))))))))
 
 
-
-(defun org-calories-macros--tableupdate (year month &optional day)
-  "Update the Dailies table for YEAR MONTH  DAY if given, otherwise for all dates."
+(defun org-calories-macros--tableupdate (&optional year month day)
+  "Update the Dailies table for YEAR MONTH DAY if given, otherwise just update for today.
+If DAY is ``t', then update for all dates in that YEAR MONTH."
   ;; TODO: Slow when day is true.
   (org-calories-log--makeheaders)
   (let* ((year (or year (string-to-number (format-time-string "%Y"))))
          (month (or month (string-to-number (format-time-string "%m"))))
          (day (or day (string-to-number (format-time-string "%d"))))
          (current-dailies (org-calories-macros--tableretrieve year month))
+         (has-data-p (> (length (plist-get (car current-dailies) :date)) 0))
          (header-order (--filter (symbolp it) (car current-dailies)))
          ;; Parse the logbook
          (new-daylist (org-calories-macros--summarize
@@ -176,11 +178,12 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
       (let* ((new-date (plist-get day :date))
              (new-day-num (org-calories-timestring--to-integers new-date))
              ;; do a string match on dates
-             (ind-date (--find-index (org-calories-timestring--eq
-                                      new-day-num
-                                      (org-calories-timestring--to-integers
-                                       (plist-get it :date)))
-                                     current-dailies)))
+             (ind-date (if has-data-p
+                           (--find-index (org-calories-timestring--eq
+                                          new-day-num
+                                          (org-calories-timestring--to-integers
+                                           (plist-get it :date)))
+                                         current-dailies))))
         (if ind-date
             ;; Update existing
             (let* ((get-date (nth ind-date current-dailies))
@@ -189,14 +192,18 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
               (setq current-dailies
                     (-replace-at ind-date new-day current-dailies)))
           ;; Otherwise insert new date at the right location
-          (let ((insert-loc (--find-index (org-calories-timestring--lteq
-                                           new-day-num
-                                           (org-calories-timestring--to-integers
-                                            (plist-get it :date)))
-                                          current-dailies))
+          (let ((insert-loc (if has-data-p
+                                (--find-index (org-calories-timestring--lteq
+                                               new-day-num
+                                               (org-calories-timestring--to-integers
+                                                (plist-get it :date)))
+                                              current-dailies)
+                              0))
                 (new-day (append day (list :notes ""))))
             (if insert-loc
-                (setq current-dailies (-insert-at insert-loc new-day current-dailies))
+                (if has-data-p
+                    (setq current-dailies (-insert-at insert-loc new-day current-dailies))
+                  (setq current-dailies (list new-day)))
               (setq current-dailies (append current-dailies
                                             ;; new day with new empty notes
                                             (list new-day))))))))
