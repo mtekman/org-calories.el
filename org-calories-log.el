@@ -207,28 +207,89 @@ Inserts TYPE NAME AMOUNT KC, sorts and trims the table."
         (org-calories-log--endlog 'food food amount-want scaled-calories)))))
 
 
+(defun org-calories-log-note--notescolumn-addhash (year month &optional day)
+  "Add notes column to dailies for YEAR MONTH if it doesn't exist, and adds a hash if DAY given too."
+  (cl-labels ((getheaders (tdata) (--map (if (string-prefix-p ":" it) (intern it))
+                                         (car tdata)))
+              (getheadindex (keyw headers) (--find-index (equal it keyw) headers)))
+    (let ((tblname (format "#+NAME:%4d-%02d-Dailies" year month)))
+      (with-current-buffer (find-file-noselect org-calories-log-file)
+        (save-excursion
+          (goto-char 0)
+          (when (search-forward tblname nil t)
+            (forward-line 1)
+            (let* ((tdata (org-table-to-lisp))
+                   (headers (getheaders tdata)))
+              ;; Create notes column if not there
+              (unless (member :notes headers)
+                (move-end-of-line 1)
+                (org-table-insert-column)
+                (insert ":notes")
+                (org-table-align)
+                ;; recalc after insertion
+                (setq tdata (org-table-to-lisp)
+                      headers (getheaders tdata)))
+              ;; Add hash if day exists
+              (if day
+                  (let* ((datecol (getheadindex :date headers))
+                         (notecol (getheadindex :notes headers))
+                         (dates (--map (org-calories-timestring--to-integers
+                                        (nth datecol it))
+                                       (cddr tdata)))
+                         (tmatch (getheadindex (list year month day) dates)))
+                    (if (not tmatch)
+                        (user-error "That date is not in Dailies table")
+                      ;; first line is header, second line is data
+                      (org-table-goto-line (+ tmatch 2))
+                      ;; recalculate table columns if we have inserted before
+                      (if notecol
+                          (org-table-goto-column (1+ notecol))
+                        (org-table-goto-column (length headers)))
+                      ;; insert if no data
+                      (if (eq 0 (length (org-table-get (+ tmatch 2)
+                                                       (1+ notecol))))
+                          (insert (format "[[%s]]" (org-calories-timestring--to-hash
+                                                    (format "%4d-%02d-%02d" year month day)))))
+                      (org-table-align)))))))))))
+
+
 (defun org-calories-log-note (&optional date)
   "Log note for DATE."
   (interactive)
   (let* ((tabdt nil)
-         (daten (or date (org-calories-timestring--to-integers (org-read-date))))
-         (tabld (format "#+NAME:%4d-%02d-Notes" (car daten) (cadr daten)))
-         (datem (--reduce (* acc it) daten))
-         (bas64 (base64-encode-string (format "%s" datem))))
+         (dstrn (or date (org-read-date)))
+         (dhash (org-calories-timestring--to-hash dstrn))
+         (daten (org-calories-timestring--to-integers dstrn))
+         (tabld (format "%4d-%02d-Notes" (car daten) (cadr daten)))
+         (logld (format "%4d-%02d-Logbook" (car daten) (cadr daten)))
+         (hashstr (format "<<%s>>" (org-calories-timestring--to-hash
+                                    (eval `(format "%4d-%02d-%02d" ,@daten)))))
+         (tabln (concat "#+NAME:" tabld)))
     (with-current-buffer (find-file-noselect org-calories-log-file)
+      ;; Look for chosen date in Dailies (and make notes column)
+      (eval `(org-calories-log-note--notescolumn-addhash ,@daten))
+      ;; Insert Notes table before Logbook if it does not exist
+      (unless (search-forward tabln nil t)
+        (when (search-forward (concat "#+NAME:" logld) nil t)
+          (save-excursion
+            (forward-line -1)
+            (insert "\n")
+            (forward-line -1)
+            (insert "\n")
+            (forward-line -1)
+            (org-calories-db--maketable nil tabld "| :ref | :notes |"))))
+      ;; Insert ref in Notes table
       (goto-char 0)
       (when (search-forward tabld nil t)
-        (forward-line 1)
-        (let* ((table-data (org-table-to-lisp))
-               (header-order (--map (if (string-prefix-p ":" it) (intern it))
-                                    (car table-data))))
-          (dolist (row (cddr table-data) tabdt)
-            (let ((paired-data (--reduce-from (append acc it) nil
-                                              (--filter (car it) ;; discard non-keyword columns
-                                                        (--zip-with (list it other)
-                                                                    header-order
-                                                                    row)))))
-              (push paired-data tabdt))))))))
+        (if (search-forward hashstr nil t)
+            (progn (org-cycle)
+                   (user-error "Note already exists for this date, just edit it"))
+          (forward-line 3)
+          (org-cycle)
+          (insert hashstr)
+          (org-cycle)
+          (insert (read-string (format "Note [%s]: " dhash)))
+          (org-table-align))))))
 
 
 (defun org-calories-log-recipe (recipe &optional portion)
