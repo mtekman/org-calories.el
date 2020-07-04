@@ -269,9 +269,10 @@ Inserts TYPE NAME AMOUNT KC, sorts and trims the table."
       ;; Look for chosen date in Dailies (and make notes column)
       (eval `(org-calories-log-note--notescolumn-addhash ,@daten))
       ;; Insert Notes table before Logbook if it does not exist
-      (unless (search-forward tabln nil t)
-        (when (search-forward (concat "#+NAME:" logld) nil t)
-          (save-excursion
+      (save-excursion
+        (goto-char 0)
+        (unless (search-forward tabln nil t)
+          (when (search-forward (concat "#+NAME:" logld) nil t)
             (forward-line -1)
             (insert "\n")
             (forward-line -1)
