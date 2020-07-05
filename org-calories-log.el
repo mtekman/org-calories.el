@@ -341,7 +341,31 @@ The unit does not actually matter because it's set by the database and we are ju
                                 (- scaled-calories))))) ;; negative kc
 
 
-;;TODO:
+(defun org-calories-log--estimate-grams (kc carb-prot-fat)
+  "Get the grams that make up the KC for a given CARB-PROT-FAT ratio."
+  (cl-labels ((ratio2fract (elem summed) (/ (float elem) summed))
+              (propOfKC (fract kc) (* (float kc) fract)))
+    (let* ((cpf (-map 'string-to-number (split-string carb-prot-fat ":")))
+           (carb (nth 0 cpf))
+           (prot (nth 1 cpf))
+           (fat (nth 2 cpf))
+           (cpf-sum (-sum cpf))
+           (g-carb (/ (propOfKC (ratio2fract carb cpf-sum) kc) 4))
+           (g-prot (/ (propOfKC (ratio2fract prot cpf-sum) kc) 4))
+           (g-fat  (/ (propOfKC (ratio2fract fat cpf-sum) kc) 9)))
+      (list g-carb g-prot g-fat))))
+
+(defun org-calories-log-estimatedkc (kc carb-prot-fat)
+  "Log KC with rough CARB-PROT-FAT ratios as a string, for those days when you just plain forgot what you ate."
+  (interactive "nEstimated calories (kC): \nsRatio [carb:protein:fat] ")
+  (-let* (((carb prot fat) (org-calories-log--estimate-grams kc carb-prot-fat))
+          ;; integers are precise enough for estimations
+          (gstring (format "Carbs:%d, Protein:%d, Fat:%d" carb prot fat))) 
+    (org-calories-log--prelog)
+    (with-current-buffer (find-file-noselect org-calories-log-file)
+      (org-calories-log--endlog 'Estimate gstring 1 kc))))
+
+
 (defun org-calories-log-water (amount)
   "Log water AMOUNT."
   (ignore amount))

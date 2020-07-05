@@ -65,7 +65,7 @@ If SUBEXER, then subtract the exercise kCal from the food kCal."
       (let* ((scaled-items-day (--filter (or (not day)
                                              (string= (plist-get it :date) day))
                                          scaled-items))
-             (foods (--filter (eq (plist-get it :type) 'food) scaled-items-day))
+             (foods (--filter (member (plist-get it :type) '(food estimate)) scaled-items-day))
              (recipes (--filter (eq (plist-get it :type) 'recipe) scaled-items-day))
              (exercises (--filter (eq (plist-get it :type) 'exercise) scaled-items-day)))
         (let* ((flatten-foods (--reduce (org-calories-entry--foods-add acc it)
@@ -111,7 +111,6 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                       (type (intern (downcase (nth 1 line))))
                       (item (nth 2 line))
                       (amount (string-to-number (nth 3 line))))
-                  ;;(kc (string-to-number (nth 4 line))))
                   (let* ((timedata (cadr (org-timestamp-from-string timestamp)))
                          (timekey (format "%4d-%02d-%02d"
                                           (plist-get timedata :year-start)
@@ -120,19 +119,33 @@ If DAY is t, then it collects the entire month.  If nil it collects the current 
                          (timestamp (format "<%s>" timekey)))
                     (if (string-prefix-p timepref timekey)
                         (let ((amount-scaled
-                               (cond ((string= type "food")
+                               (cond ((eq type 'food)
                                       (org-calories-db--scale-item
                                        (org-calories-entry--foods-retrieve item)
                                        amount))
-                                     ((string= type "recipe")
+                                     ((eq type 'recipe)
                                       (org-calories-db--scale-item
                                        (org-calories-entry--recipes-calculate
                                         (org-calories-entry--recipes-retrieve item))
                                        amount))
-                                     ((string= type "exercise")
+                                     ((eq type 'exercise)
                                       (org-calories-db--scale-item
                                        (org-calories-entry--exercises-retrieve item)
                                        amount))
+                                     ((eq type 'estimate)
+                                      ;; item is never scaled, so amount not needed
+                                      (let* ((kc (string-to-number (nth 4 line)))
+                                             (cpf-plist (-flatten
+                                                         (--map (-let (((type gram) (split-string it ":")))
+                                                                  (list (intern (concat ":" (downcase type)))
+                                                                        (string-to-number gram)))
+                                                                (split-string item ", ")))))
+                                        (append (list :kc kc
+                                                      :sat (/ (plist-get cpf-plist :fat) 2)
+                                                      :sugars (/ (plist-get cpf-plist :carbs) 2)
+                                                      :fibre (/ (plist-get cpf-plist :carbs) 2)
+                                                      :salt 0)
+                                                cpf-plist)))
                                      (t (user-error "No such type")))))
                           (push (append (list :date timestamp :name item :type type) amount-scaled)
                                 list-items))))))))))))
