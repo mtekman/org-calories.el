@@ -76,7 +76,8 @@
   (let* ((type (read-multiple-choice
                 "Entry Type: " '((?f "food")
                                  (?r "recipe")
-                                 (?e "exercise"))))
+                                 (?e "exercise")
+                                 (?s "estimate"))))
          (fstr (format "org-calories-log-%s" (cadr type)))
          (fint (intern fstr)))
     (call-interactively fint)))
@@ -355,7 +356,7 @@ The unit does not actually matter because it's set by the database and we are ju
            (g-fat  (/ (propOfKC (ratio2fract fat cpf-sum) kc) 9)))
       (list g-carb g-prot g-fat))))
 
-(defun org-calories-log-estimatedkc (kc carb-prot-fat)
+(defun org-calories-log-estimate (kc carb-prot-fat)
   "Log KC with rough CARB-PROT-FAT ratios as a string, for those days when you just plain forgot what you ate."
   (interactive "nEstimated calories (kC): \nsRatio [carb:protein:fat] ")
   (-let* (((carb prot fat) (org-calories-log--estimate-grams kc carb-prot-fat))
