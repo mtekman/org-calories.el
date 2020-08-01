@@ -24,6 +24,10 @@ At the moment it supports logging:
 
 ** Installation
 
+   (Currently not in MELPA) 
+
+   Clone this repo and set the =load-path= below:
+
    #+begin_src elisp
      (use-package org-calories
        :load-path ("~/repos/org-calories.el")
