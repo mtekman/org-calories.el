@@ -1,0 +1,85 @@
+#+TITLE: org-calories.el
+
+*THIS IS ALPHA SOFTWARE*
+
+#+HTML: <a href="https://melpa.org/#/org-calories"><img src="https://melpa.org/packages/org-calories-badge.svg"></a>
+
+This package provides a set of functions for logging your food, recipes, and fitness within two org-mode notebooks:
+
+  + logbook :: Where all logged data, and daily summaries appear
+  + database :: Where all calorific information related to food, recipes, exercises, and more (planned) appear
+
+Items are logged into the logbook using items previously-defined in the database.
+
+At the moment it supports logging:
+
+ * Food
+ * Recipes
+ * Exercise
+ * (Planned) Beverages, Caffeine, Water
+ * (Planned) Weight
+
+#+HTML: <img src="https://user-images.githubusercontent.com/20641402/89109898-9708f500-d445-11ea-8378-6fdb27dfc752.gif" />
+
+
+** Installation
+
+   #+begin_src elisp
+     (use-package org-calories
+       :load-path ("~/repos/org-calories.el")
+       :bind (("C-c l" . org-calories-log)
+              ("C-c e" . org-calories-entry)
+              ("C-c j" . org-calories-macros-printlast)
+              ("C-c 1" . org-calories-log-show)
+              ("C-c 2" . org-calories-db-show))
+       :custom
+       (org-calories-db-file "~/repos/gtd/database.org")
+       (org-calories-log-file "~/repos/gtd/logbook.org"))
+   #+end_src   
+
+   Make sure to set your =org-calories-db-file= and =org-calories-log-file= to a version controlled location, as this package is extremely alpha and things are known to break. So please backup these files on an almost daily basis to maintain your logs.
+
+   This package has been used by me without many problems for 3 months, but it is not fully developed and things will still break.
+
+
+** Usage
+
+   Call =org-calories-log= and follow the prompts to log a food item. To get a summary of your current daily intake call =org-calories-macros-printlast=. That's it!
+
+   New food items can be inserted manually (recommended) or automatically from an online resource (currently =fddb.info=, but this does not give great results). 
+   Exercises can also be inserted manually, with units being either "mins" or "lots".
+   *Recipes must be defined from the database table manually*. 
+  
+
+** Units
+
+Units are pretty arbitrary, and this is a good thing since rather than saying "I had 130g of Spam" you can just specify "I had a half can of Spam"
+
+
+** Customisation
+
+   (There's a few but I can't remember them all)
+
+   The columns shown in the "Dailies" table of your logbook can be set by you. By default we use
+
+   | :kc             | :fat    | :sat                   | :carbs            | :sugars    | :fibre    | :protein    | :salt    | :exercise       | :water      |
+   |-----------------+---------+------------------------+-------------------+------------+-----------+-------------+----------+-----------------+-------------|
+   | Calories (KCal) | Fat (g) | of which Saturated (g) | Carbohydrates (g) | Sugars (g) | Fibre (g) | Protein (g) | Salt (g) | Calories (KCal) | =not working= |
+
+   But if you are not interested in all of these you can just delete the columns you want to see and the library will remember this whenever it updates the table
+
+** Changelog and Planned Features
+
+*** 0.2 (Planned)
+    + [ ] Logging Weight
+    + [ ] Logging Liquids
+      + [ ] Caffeine
+      + [ ] Water
+      + [ ] Alcohol
+    + [ ] Plots
+
+*** 0.1
+    Initial release
+
+
+
