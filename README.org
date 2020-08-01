@@ -75,6 +75,7 @@ Units are pretty arbitrary, and this is a good thing since rather than saying "I
 ** Changelog and Planned Features
 
 *** 0.2 (Planned)
+    + [ ] Target Macros
     + [ ] Logging Weight
     + [ ] Logging Liquids
       + [ ] Caffeine
